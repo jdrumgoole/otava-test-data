@@ -24,7 +24,6 @@ classifiers = [
 dependencies = [
     "numpy>=1.24.0",
     "pandas>=2.0.0",
-    "apache-otava>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -44,6 +43,7 @@ web = [
     "uvicorn[standard]>=0.27.0",
     "jinja2>=3.1.0",
     "python-multipart>=0.0.6",
+    "apache-otava>=0.1.0",
 ]
 all = [
     "otava-test-data[dev,docs,web]",

@@ -15,8 +15,13 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-# Otava imports
-from otava.analysis import compute_change_points
+# Otava imports - optional dependency
+try:
+    from otava.analysis import compute_change_points
+    OTAVA_AVAILABLE = True
+except ImportError:
+    OTAVA_AVAILABLE = False
+    compute_change_points = None
 
 from otava_test_data.generators.basic import (
     constant,
@@ -292,6 +297,14 @@ def run_otava_analysis(
     Returns:
         Dictionary with detected change points and metrics.
     """
+    if not OTAVA_AVAILABLE:
+        return {
+            "error": "apache-otava not installed. Install with: pip install otava-test-data[web]",
+            "detected_change_points": [],
+            "detected_indices": [],
+            "count": 0,
+        }
+
     try:
         result = compute_change_points(
             data,
