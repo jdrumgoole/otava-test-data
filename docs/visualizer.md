@@ -189,21 +189,90 @@ Uniformly distributed random values.
 
 **Use case**: Test with non-Gaussian noise distribution.
 
-## Otava Analysis Parameters
+## Analysis Methods
 
-### Window Length
+The visualizer supports three different analysis methods for detecting change points. Each method has different strengths and is suited to different types of data patterns.
 
-The sliding window size used by Otava for statistical analysis.
+![All three analysis methods](_static/screenshots/all-analysis-noisy.png)
 
-- **Default**: 30
-- **Effect**: Smaller windows are more sensitive but prone to false positives. Larger windows are more robust but may miss closely-spaced changes.
+### Otava Analysis (Statistical)
 
-### Max P-Value
+**What it does**: Otava uses statistical hypothesis testing to find points where the data distribution changes significantly. It compares the data before and after each potential change point using statistical tests.
 
-Statistical threshold for change point significance.
+**Best for**: Detecting genuine shifts in the average (mean) value of your data, such as performance regressions or improvements that persist over time.
 
-- **Default**: 0.05
-- **Effect**: Lower values make detection more strict (fewer false positives but may miss true changes).
+![Otava Analysis enabled](_static/screenshots/otava-analysis-only.png)
+
+#### Parameters
+
+| Parameter | Default | What it means |
+|-----------|---------|---------------|
+| **Window Length** | 30 | How many data points to look at on each side of a potential change point. Think of it like looking 30 points backward and 30 points forward to decide if something changed. |
+| **Max P-Value** | 0.05 | How confident Otava needs to be before reporting a change. Lower values (like 0.01) mean "only report changes I'm very sure about" - fewer false alarms but might miss subtle changes. Higher values (like 0.1) mean "report anything that looks suspicious" - catches more changes but may include false positives. |
+
+**Understanding P-Value**: The p-value is like a confidence score, but inverted. A p-value of 0.05 means "there's only a 5% chance this apparent change is just random noise." Scientists commonly use 0.05 as a threshold - anything below it is considered statistically significant.
+
+**Tips for tuning**:
+- If Otava is missing obvious changes: try increasing Max P-Value to 0.1
+- If Otava is reporting too many false changes: try decreasing Max P-Value to 0.01
+- For noisy data: increase Window Length to 50 or more
+- For detecting rapid successive changes: decrease Window Length to 15-20
+
+---
+
+### Moving Average Analysis (Trend-Based)
+
+**What it does**: This method calculates a rolling average of your data and flags points where the actual value deviates significantly from this average. It's looking for points that "break the trend."
+
+**Best for**: Detecting sudden spikes or drops that stand out from the recent trend. Good for finding outliers and sudden anomalies.
+
+#### Parameters
+
+| Parameter | Default | What it means |
+|-----------|---------|---------------|
+| **MA Window** | 10 | The number of recent data points used to calculate the moving average. A window of 10 means "average the last 10 points to get the expected value." |
+| **Threshold (σ)** | 2.0 | How many standard deviations away from the moving average a point must be to be flagged. The symbol σ (sigma) represents standard deviation - a measure of typical variation. |
+
+**Understanding the Threshold**: If your data typically varies by ±5 units from its average, setting threshold to 2σ means "flag anything more than 10 units away from expected." A threshold of 3σ would require 15+ units deviation.
+
+**Tips for tuning**:
+- For stable data with occasional anomalies: use smaller MA Window (5-10) and lower threshold (1.5-2.0)
+- For volatile data: use larger MA Window (15-30) and higher threshold (2.5-3.0)
+- To catch subtle shifts: lower the threshold
+- To reduce false positives: raise the threshold
+
+---
+
+### Boundary Analysis (Threshold-Based)
+
+**What it does**: The simplest method - it checks if data points cross predefined upper or lower boundaries. Any point outside these boundaries is flagged as a potential change point.
+
+**Best for**: Monitoring against known acceptable ranges. Useful when you have specific performance thresholds that should not be crossed (e.g., "response time must stay below 200ms").
+
+#### Parameters
+
+| Parameter | Default | What it means |
+|-----------|---------|---------------|
+| **Upper Bound** | 115 | Any data point above this value will be flagged. Think of it as your "maximum acceptable value." |
+| **Lower Bound** | 85 | Any data point below this value will be flagged. Think of it as your "minimum acceptable value." |
+
+**Tips for tuning**:
+- Set bounds based on your actual performance requirements
+- For the default test data (mean around 100): bounds of 85-115 will catch significant deviations
+- Tighter bounds catch more violations but may flag normal variation
+- Wider bounds only catch severe anomalies
+
+---
+
+## Comparing Analysis Methods
+
+| Method | Strength | Weakness | Best Use Case |
+|--------|----------|----------|---------------|
+| **Otava** | Statistically rigorous, finds true distribution changes | May miss gradual changes, requires tuning | Production monitoring, A/B testing |
+| **Moving Average** | Good at finding outliers, adapts to trends | Can miss sustained shifts | Anomaly detection, spike detection |
+| **Boundary** | Simple, predictable, fast | Needs known thresholds, misses relative changes | SLA monitoring, compliance checking |
+
+**Recommendation**: Start with Otava for general change point detection. Add Moving Average if you need to catch outliers. Use Boundary Analysis when you have specific threshold requirements.
 
 ### Match Tolerance
 
@@ -223,6 +292,6 @@ The visualizer calculates these metrics when comparing Otava's results to ground
 - **False Positives (FP)**: Incorrectly flagged non-change-points
 - **False Negatives (FN)**: Missed true change points
 
-## Compare All Patterns
+## Show All Graphs
 
-Click "Compare All Patterns" to run Otava analysis on all 12 generators simultaneously. This produces a summary table showing how well Otava performs across different types of change point patterns.
+Click "Show All Graphs" to run analysis on all generators simultaneously. This produces a grid of charts showing how well the analysis methods perform across different types of change point patterns, allowing you to quickly compare detection accuracy across pattern types.
