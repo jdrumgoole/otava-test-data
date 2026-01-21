@@ -6,7 +6,7 @@ Test data generators and benchmarks for [Apache Otava](https://github.com/apache
 
 The package includes an interactive web visualizer for exploring test patterns and comparing change point detection results against ground truth.
 
-![Step Function Detection](https://otava-test-data.readthedocs.io/en/latest/_static/screenshots/readme-step-function.png)
+![Step Function Detection](https://raw.githubusercontent.com/jdrumgoole/otava-test-data/main/docs/_static/screenshots/readme-step-function.png)
 
 **Features:**
 - Generate and visualize 17 different test patterns
@@ -18,13 +18,13 @@ The package includes an interactive web visualizer for exploring test patterns a
 
 Detect multiple successive changes in your data:
 
-![Multiple Changes Detection](https://otava-test-data.readthedocs.io/en/latest/_static/screenshots/readme-multiple-changes.png)
+![Multiple Changes Detection](https://raw.githubusercontent.com/jdrumgoole/otava-test-data/main/docs/_static/screenshots/readme-multiple-changes.png)
 
 ### Variance Changes
 
 Detect changes in data volatility even when the mean stays constant:
 
-![Variance Change Detection](https://otava-test-data.readthedocs.io/en/latest/_static/screenshots/readme-variance-change.png)
+![Variance Change Detection](https://raw.githubusercontent.com/jdrumgoole/otava-test-data/main/docs/_static/screenshots/readme-variance-change.png)
 
 ### Starting the Visualizer
 
