@@ -109,7 +109,7 @@ GENERATORS = {
         "name": "Single Outlier",
         "description": "Single anomaly point: S = x, x, x', x, x...",
         "category": "basic",
-        "has_change_points": True,
+        "has_change_points": False,
         "params": {
             "baseline": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
             "outlier_value": {"type": "float", "default": 150.0, "min": 0, "max": 500, "step": 1},
@@ -193,7 +193,7 @@ GENERATORS = {
         "name": "Multiple Outliers",
         "description": "Multiple anomalous points",
         "category": "advanced",
-        "has_change_points": True,
+        "has_change_points": False,
         "params": {
             "baseline": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
             "outlier_value": {"type": "float", "default": 150.0, "min": 0, "max": 500, "step": 1},
@@ -209,6 +209,66 @@ GENERATORS = {
         "has_change_points": True,
         "params": {
             "mean": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
+        },
+    },
+    # Clean patterns (no noise) for visualization
+    "step_function_clean": {
+        "func": step_function,
+        "name": "Step Function (Clean)",
+        "description": "Clean step change without noise",
+        "category": "clean",
+        "has_change_points": True,
+        "params": {
+            "value_before": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
+            "value_after": {"type": "float", "default": 120.0, "min": 0, "max": 500, "step": 1},
+            "sigma": {"type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5},
+        },
+    },
+    "multiple_changes_clean": {
+        "func": multiple_changes,
+        "name": "Multiple Changes (Clean)",
+        "description": "Multiple step changes without noise",
+        "category": "clean",
+        "has_change_points": True,
+        "params": {
+            "sigma": {"type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5},
+        },
+    },
+    "regression_fix_clean": {
+        "func": regression_fix,
+        "name": "Regression + Fix (Clean)",
+        "description": "Temporary regression without noise",
+        "category": "clean",
+        "has_change_points": True,
+        "params": {
+            "value_normal": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
+            "value_regression": {"type": "float", "default": 130.0, "min": 0, "max": 500, "step": 1},
+            "regression_duration": {"type": "int", "default": 20, "min": 2, "max": 100, "step": 1},
+            "sigma": {"type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5},
+        },
+    },
+    "banding_clean": {
+        "func": banding,
+        "name": "Banding (Clean)",
+        "description": "Clean oscillation between two values",
+        "category": "clean",
+        "has_change_points": False,
+        "params": {
+            "value1": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
+            "value2": {"type": "float", "default": 110.0, "min": 0, "max": 500, "step": 1},
+            "sigma": {"type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5},
+        },
+    },
+    "outlier_clean": {
+        "func": outlier,
+        "name": "Single Outlier (Clean)",
+        "description": "Clean single anomaly point without noise",
+        "category": "clean",
+        "has_change_points": False,
+        "params": {
+            "baseline": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
+            "outlier_value": {"type": "float", "default": 150.0, "min": 0, "max": 500, "step": 1},
+            "sigma": {"type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5},
         },
     },
 }
@@ -416,8 +476,10 @@ def timeseries_to_dict(
         )
         result["otava"] = otava_result
 
-        # Compute accuracy metrics
-        ground_truth_indices = ts.get_change_point_indices()
+        # Compute accuracy metrics (exclude outliers - they're anomalies, not change points)
+        ground_truth_indices = [
+            cp.index for cp in ts.change_points if cp.change_type != "outlier"
+        ]
         detected_indices = otava_result.get("detected_indices", [])
         result["accuracy"] = compute_accuracy_metrics(
             ground_truth_indices,
@@ -463,7 +525,7 @@ async def generate_data(
     seed: int = Query(default=42),
     run_otava: bool = Query(default=False, description="Run Otava analysis"),
     window_len: int = Query(default=30, ge=5, le=100, description="Otava window length"),
-    max_pvalue: float = Query(default=0.05, ge=0.001, le=0.5, description="Otava max p-value"),
+    max_pvalue: float = Query(default=0.05, ge=0.001, le=1.0, description="Otava max p-value"),
     tolerance: int = Query(default=5, ge=0, le=50, description="Accuracy tolerance"),
     # Dynamic params will be passed as query parameters
     request: Request = None,
@@ -516,7 +578,7 @@ async def analyze_with_otava(
     length: int = Query(default=200, ge=10, le=2000),
     seed: int = Query(default=42),
     window_len: int = Query(default=30, ge=5, le=100, description="Otava window length"),
-    max_pvalue: float = Query(default=0.05, ge=0.001, le=0.5, description="Otava max p-value"),
+    max_pvalue: float = Query(default=0.05, ge=0.001, le=1.0, description="Otava max p-value"),
     min_magnitude: float = Query(default=0.0, ge=0, description="Minimum change magnitude"),
     tolerance: int = Query(default=5, ge=0, le=50, description="Accuracy tolerance"),
     request: Request = None,

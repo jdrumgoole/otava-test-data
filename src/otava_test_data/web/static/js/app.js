@@ -19,7 +19,21 @@ const dynamicParams = document.getElementById('dynamic-params');
 const runOtavaCheckbox = document.getElementById('run-otava-checkbox');
 const windowLenInput = document.getElementById('window-len-input');
 const maxPvalueInput = document.getElementById('max-pvalue-input');
-const toleranceInput = document.getElementById('tolerance-input');
+const yMinInput = document.getElementById('y-min-input');
+const yMaxInput = document.getElementById('y-max-input');
+
+// DOM Elements - Moving Average Controls
+const runMaCheckbox = document.getElementById('run-ma-checkbox');
+const maWindowInput = document.getElementById('ma-window-input');
+const maThresholdInput = document.getElementById('ma-threshold-input');
+
+// DOM Elements - Boundary Controls
+const runBoundaryCheckbox = document.getElementById('run-boundary-checkbox');
+const boundaryUpperInput = document.getElementById('boundary-upper-input');
+const boundaryLowerInput = document.getElementById('boundary-lower-input');
+
+// Default match tolerance for comparing detected vs ground truth change points
+const DEFAULT_TOLERANCE = 0;
 
 // DOM Elements - Actions
 const generateBtn = document.getElementById('generate-btn');
@@ -97,7 +111,18 @@ function setupEventListeners() {
     runOtavaCheckbox.addEventListener('change', generateData);
     windowLenInput.addEventListener('change', generateData);
     maxPvalueInput.addEventListener('change', generateData);
-    toleranceInput.addEventListener('change', generateData);
+    yMinInput.addEventListener('change', generateData);
+    yMaxInput.addEventListener('change', generateData);
+
+    // Moving Average controls
+    runMaCheckbox.addEventListener('change', generateData);
+    maWindowInput.addEventListener('change', generateData);
+    maThresholdInput.addEventListener('change', generateData);
+
+    // Boundary controls
+    runBoundaryCheckbox.addEventListener('change', generateData);
+    boundaryUpperInput.addEventListener('change', generateData);
+    boundaryLowerInput.addEventListener('change', generateData);
 }
 
 // Update generator info display
@@ -157,6 +182,113 @@ function formatParamName(name) {
         .replace(/\b\w/g, c => c.toUpperCase());
 }
 
+/**
+ * Moving Average Change Point Detection
+ * Detects change points by comparing two adjacent moving averages
+ * A change point is detected when the difference between them exceeds threshold * std
+ */
+function detectChangePointsMA(data, windowSize, threshold) {
+    const n = data.length;
+    if (n < windowSize * 2) {
+        return { indices: [], details: [] };
+    }
+
+    // Compute moving averages
+    const movingAvg = [];
+    for (let i = 0; i <= n - windowSize; i++) {
+        const window = data.slice(i, i + windowSize);
+        const avg = window.reduce((a, b) => a + b, 0) / windowSize;
+        movingAvg.push(avg);
+    }
+
+    // Compute standard deviation of the data
+    const mean = data.reduce((a, b) => a + b, 0) / n;
+    const std = Math.sqrt(data.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / n);
+
+    // Detect change points where consecutive MAs differ significantly
+    const indices = [];
+    const details = [];
+
+    for (let i = windowSize; i < n - windowSize; i++) {
+        const maBefore = movingAvg[i - windowSize];
+        const maAfter = movingAvg[i];
+        const diff = Math.abs(maAfter - maBefore);
+
+        if (diff > threshold * std) {
+            // Check if this is a local maximum of the difference
+            let isLocalMax = true;
+            for (let j = Math.max(0, i - windowSize/2); j < Math.min(n - windowSize, i + windowSize/2); j++) {
+                if (j !== i) {
+                    const otherDiff = Math.abs(movingAvg[j] - movingAvg[Math.max(0, j - windowSize)]);
+                    if (otherDiff > diff) {
+                        isLocalMax = false;
+                        break;
+                    }
+                }
+            }
+
+            if (isLocalMax && (indices.length === 0 || i - indices[indices.length - 1] >= windowSize)) {
+                indices.push(i);
+                details.push({
+                    index: i,
+                    maBefore: maBefore.toFixed(2),
+                    maAfter: maAfter.toFixed(2),
+                    diff: diff.toFixed(2),
+                    threshold: (threshold * std).toFixed(2)
+                });
+            }
+        }
+    }
+
+    return { indices, details };
+}
+
+/**
+ * Boundary/Threshold Change Point Detection
+ * Detects change points when values cross upper or lower boundaries
+ * Only triggers once per boundary crossing (not for every point outside bounds)
+ */
+function detectChangePointsBoundary(data, upperBound, lowerBound) {
+    const indices = [];
+    const details = [];
+    let wasAboveUpper = false;
+    let wasBelowLower = false;
+
+    for (let i = 0; i < data.length; i++) {
+        const value = data[i];
+
+        // Check upper boundary crossing
+        if (value > upperBound && !wasAboveUpper) {
+            indices.push(i);
+            details.push({
+                index: i,
+                value: value.toFixed(2),
+                boundary: 'upper',
+                threshold: upperBound
+            });
+            wasAboveUpper = true;
+        } else if (value <= upperBound) {
+            wasAboveUpper = false;
+        }
+
+        // Check lower boundary crossing
+        if (value < lowerBound && !wasBelowLower) {
+            indices.push(i);
+            details.push({
+                index: i,
+                value: value.toFixed(2),
+                boundary: 'lower',
+                threshold: lowerBound
+            });
+            wasBelowLower = true;
+        } else if (value >= lowerBound) {
+            wasBelowLower = false;
+        }
+    }
+
+    return { indices, details };
+}
+
 // Generate data and update chart
 async function generateData() {
     const name = generatorSelect.value;
@@ -171,7 +303,7 @@ async function generateData() {
         run_otava: runOtava,
         window_len: windowLenInput.value,
         max_pvalue: maxPvalueInput.value,
-        tolerance: toleranceInput.value,
+        tolerance: DEFAULT_TOLERANCE,
     });
 
     // Add dynamic params
@@ -211,7 +343,7 @@ async function generateData() {
     }
 }
 
-// Update the main chart with ground truth and Otava detected points
+// Update the main chart with ground truth, Otava, and MA detected points
 function updateChart(data) {
     const ctx = mainChartCanvas.getContext('2d');
 
@@ -224,80 +356,186 @@ function updateChart(data) {
     const labels = data.data.map((_, i) => i);
     const values = data.data;
 
-    // Get change point indices
-    const groundTruthIndices = data.ground_truth?.indices || data.change_point_indices || [];
+    // Get change point indices (exclude outliers - they're anomalies, not change points)
+    const allChangePoints = data.ground_truth?.change_points || data.change_points || [];
+    const groundTruthIndices = allChangePoints
+        .filter(cp => cp.type !== 'outlier')
+        .map(cp => cp.index);
     const detectedIndices = data.otava?.detected_indices || [];
 
-    // Determine matched pairs for coloring
+    // Run MA detection if enabled
+    const runMa = runMaCheckbox.checked;
+    const maWindow = parseInt(maWindowInput.value);
+    const maThreshold = parseFloat(maThresholdInput.value);
+    const maResult = runMa ? detectChangePointsMA(values, maWindow, maThreshold) : { indices: [], details: [] };
+    const maDetectedIndices = maResult.indices;
+
+    // Determine matched pairs for Otava coloring
     const matchedPairs = data.accuracy?.matched_pairs || [];
     const matchedDetected = new Set(matchedPairs.map(p => p.detected));
-    const matchedTruth = new Set(matchedPairs.map(p => p.ground_truth));
 
-    // Create point styles
-    const pointBackgroundColors = values.map((_, i) => {
-        if (groundTruthIndices.includes(i) && detectedIndices.includes(i)) {
-            return '#10b981'; // Both - green (matched)
-        } else if (groundTruthIndices.includes(i)) {
-            if (matchedTruth.has(i)) {
-                return '#10b981'; // Ground truth matched
+    // Determine matched pairs for MA coloring
+    const maMatchedIndices = new Set();
+    maDetectedIndices.forEach(maIdx => {
+        for (const gtIdx of groundTruthIndices) {
+            if (Math.abs(maIdx - gtIdx) <= DEFAULT_TOLERANCE) {
+                maMatchedIndices.add(maIdx);
+                break;
             }
-            return '#10b981'; // Ground truth (will show as missed in table)
-        } else if (detectedIndices.includes(i)) {
-            if (matchedDetected.has(i)) {
-                return '#3b82f6'; // Detected and matched - blue
+        }
+    });
+
+    // Run Boundary detection if enabled
+    const runBoundary = runBoundaryCheckbox.checked;
+    const upperBound = parseFloat(boundaryUpperInput.value);
+    const lowerBound = parseFloat(boundaryLowerInput.value);
+    const boundaryResult = runBoundary ? detectChangePointsBoundary(values, upperBound, lowerBound) : { indices: [], details: [] };
+    const boundaryDetectedIndices = boundaryResult.indices;
+
+    // Determine matched pairs for Boundary coloring
+    const boundaryMatchedIndices = new Set();
+    boundaryDetectedIndices.forEach(bIdx => {
+        for (const gtIdx of groundTruthIndices) {
+            if (Math.abs(bIdx - gtIdx) <= DEFAULT_TOLERANCE) {
+                boundaryMatchedIndices.add(bIdx);
+                break;
             }
-            return '#ef4444'; // False positive - red
+        }
+    });
+
+    // Create point styles for Otava detected points
+    const otavaPointColors = values.map((_, i) => {
+        if (detectedIndices.includes(i)) {
+            return matchedDetected.has(i) ? '#3b82f6' : '#ef4444';
         }
         return 'transparent';
     });
 
-    const pointBorderColors = values.map((_, i) => {
-        if (groundTruthIndices.includes(i)) {
-            return '#059669'; // Green border for ground truth
-        } else if (detectedIndices.includes(i)) {
-            if (matchedDetected.has(i)) {
-                return '#2563eb'; // Blue border for matched
-            }
-            return '#dc2626'; // Red border for false positive
+    const otavaPointBorders = values.map((_, i) => {
+        if (detectedIndices.includes(i)) {
+            return matchedDetected.has(i) ? '#2563eb' : '#dc2626';
         }
         return 'transparent';
     });
 
-    const pointRadii = values.map((_, i) => {
-        if (groundTruthIndices.includes(i) || detectedIndices.includes(i)) {
-            return 8;
+    const otavaPointRadii = values.map((_, i) => detectedIndices.includes(i) ? 8 : 0);
+
+    // Create point styles for MA detected points
+    const maPointColors = values.map((_, i) => {
+        if (maDetectedIndices.includes(i)) {
+            return maMatchedIndices.has(i) ? '#8b5cf6' : '#f59e0b';
         }
-        return 0;
+        return 'transparent';
     });
 
-    const pointStyles = values.map((_, i) => {
-        if (groundTruthIndices.includes(i) && !detectedIndices.includes(i)) {
-            return 'triangle'; // Ground truth only
-        } else if (detectedIndices.includes(i) && !groundTruthIndices.includes(i)) {
-            return 'rect'; // Detected only
+    const maPointBorders = values.map((_, i) => {
+        if (maDetectedIndices.includes(i)) {
+            return maMatchedIndices.has(i) ? '#7c3aed' : '#d97706';
         }
-        return 'circle'; // Both or neither
+        return 'transparent';
     });
+
+    const maPointRadii = values.map((_, i) => maDetectedIndices.includes(i) ? 8 : 0);
+
+    // Create point styles for Boundary detected points
+    const boundaryPointColors = values.map((_, i) => {
+        if (boundaryDetectedIndices.includes(i)) {
+            return boundaryMatchedIndices.has(i) ? '#06b6d4' : '#ec4899';
+        }
+        return 'transparent';
+    });
+
+    const boundaryPointBorders = values.map((_, i) => {
+        if (boundaryDetectedIndices.includes(i)) {
+            return boundaryMatchedIndices.has(i) ? '#0891b2' : '#db2777';
+        }
+        return 'transparent';
+    });
+
+    const boundaryPointRadii = values.map((_, i) => boundaryDetectedIndices.includes(i) ? 8 : 0);
+
+    // Create vertical line annotations for ground truth change points
+    const annotations = {};
+    groundTruthIndices.forEach((idx, i) => {
+        const cp = data.ground_truth?.change_points?.find(cp => cp.index === idx);
+        annotations[`groundTruth${i}`] = {
+            type: 'line',
+            xMin: idx,
+            xMax: idx,
+            borderColor: '#10b981',
+            borderWidth: 2,
+            borderDash: [6, 4],
+            label: {
+                display: true,
+                content: cp ? `GT: ${cp.type}` : `GT: ${idx}`,
+                position: 'start',
+                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                color: 'white',
+                font: { size: 10 },
+                padding: 3,
+            }
+        };
+    });
+
+    // Build datasets with different shapes:
+    // Otava: rectRot (diamond), MA: circle, Boundary: triangle
+    const datasets = [{
+        label: data.generator,
+        data: values,
+        borderColor: '#94a3b8',
+        backgroundColor: 'rgba(148, 163, 184, 0.1)',
+        borderWidth: 1.5,
+        fill: true,
+        tension: 0,
+        pointBackgroundColor: otavaPointColors,
+        pointBorderColor: otavaPointBorders,
+        pointBorderWidth: 2,
+        pointRadius: otavaPointRadii,
+        pointHoverRadius: 10,
+        pointStyle: 'rectRot',  // Diamond shape for Otava
+    }];
+
+    // Add MA dataset if enabled (circle shape)
+    if (runMa) {
+        datasets.push({
+            label: 'MA Detection',
+            data: values,
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+            borderWidth: 0,
+            fill: false,
+            pointBackgroundColor: maPointColors,
+            pointBorderColor: maPointBorders,
+            pointBorderWidth: 2,
+            pointRadius: maPointRadii,
+            pointHoverRadius: 10,
+            pointStyle: 'circle',  // Circle shape for MA
+        });
+    }
+
+    // Add Boundary dataset if enabled (triangle shape)
+    if (runBoundary) {
+        datasets.push({
+            label: 'Boundary Detection',
+            data: values,
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+            borderWidth: 0,
+            fill: false,
+            pointBackgroundColor: boundaryPointColors,
+            pointBorderColor: boundaryPointBorders,
+            pointBorderWidth: 2,
+            pointRadius: boundaryPointRadii,
+            pointHoverRadius: 10,
+            pointStyle: 'triangle',  // Triangle shape for Boundary
+        });
+    }
 
     currentChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: data.generator,
-                data: values,
-                borderColor: '#94a3b8',
-                backgroundColor: 'rgba(148, 163, 184, 0.1)',
-                borderWidth: 1.5,
-                fill: true,
-                tension: 0,
-                pointBackgroundColor: pointBackgroundColors,
-                pointBorderColor: pointBorderColors,
-                pointBorderWidth: 2,
-                pointRadius: pointRadii,
-                pointHoverRadius: 10,
-                pointStyle: pointStyles,
-            }]
+            datasets: datasets
         },
         options: {
             responsive: true,
@@ -305,6 +543,9 @@ function updateChart(data) {
             plugins: {
                 legend: {
                     display: false,
+                },
+                annotation: {
+                    annotations: annotations
                 },
                 tooltip: {
                     callbacks: {
@@ -326,6 +567,20 @@ function updateChart(data) {
                                 }
                             }
 
+                            if (maDetectedIndices.includes(idx)) {
+                                const maDetail = maResult.details.find(d => d.index === idx);
+                                if (maDetail) {
+                                    label += ` | MA: diff=${maDetail.diff}`;
+                                }
+                            }
+
+                            if (boundaryDetectedIndices.includes(idx)) {
+                                const boundaryDetail = boundaryResult.details.find(d => d.index === idx);
+                                if (boundaryDetail) {
+                                    label += ` | Boundary: ${boundaryDetail.boundary}=${boundaryDetail.threshold}`;
+                                }
+                            }
+
                             return label;
                         }
                     }
@@ -342,6 +597,8 @@ function updateChart(data) {
                     }
                 },
                 y: {
+                    min: parseInt(yMinInput.value),
+                    max: parseInt(yMaxInput.value),
                     title: {
                         display: true,
                         text: 'Value',
@@ -357,6 +614,10 @@ function updateChart(data) {
             }
         }
     });
+
+    // Store MA result for stats display
+    data._maResult = maResult;
+    data._maMatchedIndices = maMatchedIndices;
 }
 
 // Update statistics display
@@ -370,7 +631,10 @@ function updateStats(data) {
     statLength.textContent = values.length;
     statMean.textContent = mean.toFixed(2);
     statStd.textContent = std.toFixed(2);
-    statCpTruth.textContent = data.ground_truth?.count ?? data.change_points?.length ?? 0;
+    // Count only true change points (exclude outliers)
+    const allCPs = data.ground_truth?.change_points || data.change_points || [];
+    const trueChangePointCount = allCPs.filter(cp => cp.type !== 'outlier').length;
+    statCpTruth.textContent = trueChangePointCount;
     statCpDetected.textContent = data.otava?.count ?? '-';
 }
 
@@ -458,7 +722,7 @@ async function showAllPatterns() {
     const seed = seedInput.value;
     const windowLen = windowLenInput.value;
     const maxPvalue = maxPvalueInput.value;
-    const tolerance = toleranceInput.value;
+    const tolerance = DEFAULT_TOLERANCE;
 
     try {
         document.body.classList.add('loading');
@@ -594,23 +858,39 @@ async function showAllPatterns() {
 
             // Create mini chart
             const ctx = canvas.getContext('2d');
-            const groundTruthIndices = data.ground_truth?.indices || [];
+            // Exclude outliers from ground truth (they're anomalies, not change points)
+            const allCPs = data.ground_truth?.change_points || [];
+            const groundTruthIndices = allCPs
+                .filter(cp => cp.type !== 'outlier')
+                .map(cp => cp.index);
             const detectedIndices = data.otava?.detected_indices || [];
             const matchedPairs = data.accuracy?.matched_pairs || [];
             const matchedDetected = new Set(matchedPairs.map(p => p.detected));
 
+            // Only show markers for Otava detected points (not ground truth)
             const pointBackgroundColors = data.data.map((_, i) => {
-                if (groundTruthIndices.includes(i)) {
-                    return '#10b981';
-                } else if (detectedIndices.includes(i)) {
+                if (detectedIndices.includes(i)) {
                     return matchedDetected.has(i) ? '#3b82f6' : '#ef4444';
                 }
                 return 'transparent';
             });
 
             const pointRadii = data.data.map((_, i) =>
-                groundTruthIndices.includes(i) || detectedIndices.includes(i) ? 5 : 0
+                detectedIndices.includes(i) ? 4 : 0
             );
+
+            // Create vertical line annotations for ground truth change points
+            const miniAnnotations = {};
+            groundTruthIndices.forEach((idx, i) => {
+                miniAnnotations[`gt${i}`] = {
+                    type: 'line',
+                    xMin: idx,
+                    xMax: idx,
+                    borderColor: '#10b981',
+                    borderWidth: 2,
+                    borderDash: [4, 3],
+                };
+            });
 
             const chart = new Chart(ctx, {
                 type: 'line',
@@ -633,10 +913,13 @@ async function showAllPatterns() {
                     maintainAspectRatio: false,
                     plugins: {
                         legend: { display: false },
+                        annotation: {
+                            annotations: miniAnnotations
+                        }
                     },
                     scales: {
                         x: { display: false },
-                        y: { display: true, grid: { display: false } }
+                        y: { min: parseInt(yMinInput.value), max: parseInt(yMaxInput.value), display: true, grid: { display: false } }
                     },
                     interaction: {
                         intersect: false,

@@ -38,6 +38,8 @@ for cp in ts.change_points:
 :maxdepth: 2
 
 generators
+visualizer
 api
 benchmark
+development
 ```

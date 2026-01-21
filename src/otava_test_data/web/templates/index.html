@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Otava Test Data Visualizer</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -15,10 +16,17 @@
 
     <main>
         <!-- Data Generation Controls -->
-        <section class="controls">
-            <div class="control-group">
+        <section class="controls top-controls">
+            <div class="control-group generator-group">
                 <label for="generator-select">Generator:</label>
                 <select id="generator-select">
+                    <optgroup label="Clean Patterns (No Noise)">
+                        {% for name, info in generators.items() if info.category == 'clean' %}
+                        <option value="{{ name }}" data-has-cp="{{ info.has_change_points|lower }}">
+                            {{ info.name }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
                     <optgroup label="Basic Building Blocks">
                         {% for name, info in generators.items() if info.category == 'basic' %}
                         <option value="{{ name }}" data-has-cp="{{ info.has_change_points|lower }}">
@@ -36,15 +44,17 @@
                 </select>
             </div>
 
-            <div class="control-group">
+            <div class="control-group length-group">
                 <label for="length-input">Length:</label>
-                <input type="range" id="length-input" min="50" max="1000" value="{{ default_length }}" step="10">
-                <span id="length-value">{{ default_length }}</span>
+                <div class="slider-row">
+                    <input type="range" id="length-input" min="50" max="1000" value="{{ default_length }}" step="10">
+                    <span id="length-value">{{ default_length }}</span>
+                </div>
             </div>
 
-            <div class="control-group">
+            <div class="control-group seed-group">
                 <label for="seed-input">Seed:</label>
-                <input type="number" id="seed-input" value="42" min="0" max="9999">
+                <input type="number" id="seed-input" class="seed-input" value="42" min="0" max="9999">
             </div>
 
             <div id="dynamic-params" class="dynamic-params">
@@ -52,35 +62,82 @@
             </div>
         </section>
 
-        <!-- Otava Analysis Controls -->
-        <section class="controls otava-controls">
-            <h3 class="section-title">Otava Analysis</h3>
+        <!-- Analysis Controls Wrapper -->
+        <section class="analysis-wrapper">
+            <h3 class="section-title">Analysis Controls</h3>
 
-            <div class="control-group">
-                <label for="run-otava-checkbox">
-                    <input type="checkbox" id="run-otava-checkbox" checked>
-                    Run Otava Detection
-                </label>
+            <div class="analysis-toolbar">
+                <div class="control-actions">
+                    <button id="generate-btn" class="btn-primary">Analyse</button>
+                    <button id="show-all-btn" class="btn-secondary">Show All Graphs</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="y-min-input">Y-Axis Min:</label>
+                    <input type="number" id="y-min-input" value="40" min="0" max="500" step="10">
+                </div>
+
+                <div class="control-group">
+                    <label for="y-max-input">Y-Axis Max:</label>
+                    <input type="number" id="y-max-input" value="160" min="0" max="500" step="10">
+                </div>
             </div>
 
-            <div class="control-group">
-                <label for="window-len-input">Window Length:</label>
-                <input type="number" id="window-len-input" value="30" min="5" max="100" step="5">
-            </div>
+            <div class="analysis-panels">
+                <!-- Otava Analysis Controls -->
+                <div class="controls otava-controls">
+                    <div class="panel-header">
+                        <label for="run-otava-checkbox" class="panel-title">Otava Analysis</label>
+                        <input type="checkbox" id="run-otava-checkbox" checked>
+                    </div>
 
-            <div class="control-group">
-                <label for="max-pvalue-input">Max P-Value:</label>
-                <input type="number" id="max-pvalue-input" value="0.05" min="0.001" max="0.5" step="0.01">
-            </div>
+                    <div class="panel-fields">
+                        <div class="control-group">
+                            <label for="window-len-input">Window Length</label>
+                            <input type="number" id="window-len-input" value="30" min="5" max="100" step="5">
+                        </div>
+                        <div class="control-group">
+                            <label for="max-pvalue-input">Max P-Value</label>
+                            <input type="number" id="max-pvalue-input" value="0.05" min="0.001" max="1.0" step="0.01">
+                        </div>
+                    </div>
+                </div>
 
-            <div class="control-group">
-                <label for="tolerance-input">Match Tolerance:</label>
-                <input type="number" id="tolerance-input" value="5" min="0" max="50" step="1">
-            </div>
+                <!-- Moving Average Analysis Controls -->
+                <div class="controls ma-controls">
+                    <div class="panel-header">
+                        <label for="run-ma-checkbox" class="panel-title">Moving Average Analysis</label>
+                        <input type="checkbox" id="run-ma-checkbox">
+                    </div>
+                    <div class="panel-fields">
+                        <div class="control-group">
+                            <label for="ma-window-input">MA Window</label>
+                            <input type="number" id="ma-window-input" value="10" min="3" max="50" step="1">
+                        </div>
+                        <div class="control-group">
+                            <label for="ma-threshold-input">Threshold (σ)</label>
+                            <input type="number" id="ma-threshold-input" value="2.0" min="0.5" max="5.0" step="0.1">
+                        </div>
+                    </div>
+                </div>
 
-            <div class="control-actions">
-                <button id="generate-btn" class="btn-primary">Generate & Analyze</button>
-                <button id="show-all-btn" class="btn-secondary">Compare All Patterns</button>
+                <!-- Boundary Analysis Controls -->
+                <div class="controls boundary-controls">
+                    <div class="panel-header">
+                        <label for="run-boundary-checkbox" class="panel-title">Boundary Analysis</label>
+                        <input type="checkbox" id="run-boundary-checkbox">
+                    </div>
+                    <div class="panel-fields">
+                        <div class="control-group">
+                            <label for="boundary-upper-input">Upper Bound</label>
+                            <input type="number" id="boundary-upper-input" value="115" min="0" max="500" step="5">
+                        </div>
+                        <div class="control-group">
+                            <label for="boundary-lower-input">Lower Bound</label>
+                            <input type="number" id="boundary-lower-input" value="85" min="0" max="500" step="5">
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -96,16 +153,32 @@
         <!-- Chart Legend -->
         <section class="chart-legend">
             <div class="legend-item">
-                <span class="legend-marker ground-truth"></span>
-                <span>Ground Truth Change Points</span>
+                <span class="legend-line ground-truth"></span>
+                <span>Ground Truth</span>
             </div>
             <div class="legend-item">
                 <span class="legend-marker otava-detected"></span>
-                <span>Otava Detected</span>
+                <span>Otava (TP)</span>
             </div>
             <div class="legend-item">
                 <span class="legend-marker false-positive"></span>
-                <span>False Positive</span>
+                <span>Otava (FP)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-marker ma-detected"></span>
+                <span>MA (TP)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-marker ma-false-positive"></span>
+                <span>MA (FP)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-marker boundary-detected"></span>
+                <span>Boundary (TP)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-marker boundary-false-positive"></span>
+                <span>Boundary (FP)</span>
             </div>
         </section>
 
