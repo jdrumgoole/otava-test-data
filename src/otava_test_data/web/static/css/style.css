@@ -837,6 +837,74 @@ footer a:hover {
 .accuracy-medium { color: #f59e0b; }
 .accuracy-poor { color: #ef4444; }
 
+/* Stacked Charts Container */
+.stacked-charts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.stacked-chart {
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.stacked-chart-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stacked-chart-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.stacked-chart-header .method-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.stacked-chart-header .method-indicator.otava {
+    background: var(--primary-color);
+}
+
+.stacked-chart-header .method-indicator.ma {
+    background: #8b5cf6;
+}
+
+.stacked-chart-header .method-indicator.boundary {
+    background: #06b6d4;
+}
+
+.stacked-chart-header .detection-count {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.stacked-chart-header .detection-count strong {
+    color: var(--text-primary);
+}
+
+.stacked-chart canvas {
+    width: 100% !important;
+    height: 250px !important;
+}
+
+/* First chart (Otava) gets more height */
+.stacked-chart:first-child canvas {
+    height: 300px !important;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     header {

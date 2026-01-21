@@ -4,7 +4,7 @@
  */
 
 // State
-let currentChart = null;
+let stackedCharts = [];  // Array of chart instances for stacked view
 let miniCharts = [];
 let generators = {};
 
@@ -43,7 +43,7 @@ const showAllBtn = document.getElementById('show-all-btn');
 const generatorTitle = document.getElementById('generator-title');
 const generatorDescription = document.getElementById('generator-description');
 const changePointInfo = document.getElementById('change-point-info');
-const mainChartCanvas = document.getElementById('main-chart');
+const stackedChartsContainer = document.getElementById('stacked-charts-container');
 
 // DOM Elements - Stats
 const statsSection = document.getElementById('stats');
@@ -184,8 +184,8 @@ function formatParamName(name) {
 
 /**
  * Moving Average Change Point Detection
- * Detects change points by comparing two adjacent moving averages
- * A change point is detected when the difference between them exceeds threshold * std
+ * Detects change points by comparing non-overlapping windows before and after each point
+ * A change point is detected when the difference between window means exceeds threshold * local_std
  */
 function detectChangePointsMA(data, windowSize, threshold) {
     const n = data.length;
@@ -193,50 +193,71 @@ function detectChangePointsMA(data, windowSize, threshold) {
         return { indices: [], details: [] };
     }
 
-    // Compute moving averages
-    const movingAvg = [];
-    for (let i = 0; i <= n - windowSize; i++) {
-        const window = data.slice(i, i + windowSize);
-        const avg = window.reduce((a, b) => a + b, 0) / windowSize;
-        movingAvg.push(avg);
+    // For each potential change point, compare the window before vs window after
+    const candidates = [];
+
+    for (let i = windowSize; i < n - windowSize; i++) {
+        // Window before: data[i-windowSize : i]
+        const windowBefore = data.slice(i - windowSize, i);
+        // Window after: data[i : i+windowSize]
+        const windowAfter = data.slice(i, i + windowSize);
+
+        const meanBefore = windowBefore.reduce((a, b) => a + b, 0) / windowSize;
+        const meanAfter = windowAfter.reduce((a, b) => a + b, 0) / windowSize;
+
+        // Compute standard deviation separately for each window (avoids inflation from step)
+        const stdBefore = Math.sqrt(
+            windowBefore.reduce((acc, val) => acc + Math.pow(val - meanBefore, 2), 0) / windowSize
+        );
+        const stdAfter = Math.sqrt(
+            windowAfter.reduce((acc, val) => acc + Math.pow(val - meanAfter, 2), 0) / windowSize
+        );
+        // Use average of the two stds (not affected by the step change)
+        const localStd = (stdBefore + stdAfter) / 2;
+
+        const diff = Math.abs(meanAfter - meanBefore);
+        const effectiveThreshold = threshold * Math.max(localStd, 1); // Avoid division by zero for clean data
+
+        if (diff > effectiveThreshold) {
+            candidates.push({
+                index: i,
+                diff: diff,
+                meanBefore: meanBefore,
+                meanAfter: meanAfter,
+                localStd: localStd,
+                threshold: effectiveThreshold
+            });
+        }
     }
 
-    // Compute standard deviation of the data
-    const mean = data.reduce((a, b) => a + b, 0) / n;
-    const std = Math.sqrt(data.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / n);
-
-    // Detect change points where consecutive MAs differ significantly
+    // Find local maxima of diff (peak detection)
     const indices = [];
     const details = [];
 
-    for (let i = windowSize; i < n - windowSize; i++) {
-        const maBefore = movingAvg[i - windowSize];
-        const maAfter = movingAvg[i];
-        const diff = Math.abs(maAfter - maBefore);
+    for (let c = 0; c < candidates.length; c++) {
+        const candidate = candidates[c];
+        let isLocalMax = true;
 
-        if (diff > threshold * std) {
-            // Check if this is a local maximum of the difference
-            let isLocalMax = true;
-            for (let j = Math.max(0, i - windowSize/2); j < Math.min(n - windowSize, i + windowSize/2); j++) {
-                if (j !== i) {
-                    const otherDiff = Math.abs(movingAvg[j] - movingAvg[Math.max(0, j - windowSize)]);
-                    if (otherDiff > diff) {
-                        isLocalMax = false;
-                        break;
-                    }
+        // Check if this is a local maximum within windowSize range
+        for (let j = 0; j < candidates.length; j++) {
+            if (j !== c && Math.abs(candidates[j].index - candidate.index) < windowSize) {
+                if (candidates[j].diff > candidate.diff) {
+                    isLocalMax = false;
+                    break;
                 }
             }
+        }
 
-            if (isLocalMax && (indices.length === 0 || i - indices[indices.length - 1] >= windowSize)) {
-                indices.push(i);
-                details.push({
-                    index: i,
-                    maBefore: maBefore.toFixed(2),
-                    maAfter: maAfter.toFixed(2),
-                    diff: diff.toFixed(2),
-                    threshold: (threshold * std).toFixed(2)
-                });
-            }
+        // Also ensure minimum distance from previously selected points
+        if (isLocalMax && (indices.length === 0 || candidate.index - indices[indices.length - 1] >= windowSize)) {
+            indices.push(candidate.index);
+            details.push({
+                index: candidate.index,
+                maBefore: candidate.meanBefore.toFixed(2),
+                maAfter: candidate.meanAfter.toFixed(2),
+                diff: candidate.diff.toFixed(2),
+                threshold: candidate.threshold.toFixed(2)
+            });
         }
     }
 
@@ -330,7 +351,7 @@ async function generateData() {
 
         // Hide multi-chart view when generating single
         multiChartContainer.classList.add('hidden');
-        document.querySelector('.chart-container').classList.remove('hidden');
+        document.querySelector('.stacked-charts-container').classList.remove('hidden');
         document.querySelector('.chart-legend').classList.remove('hidden');
         statsSection.classList.remove('hidden');
         accuracyMetrics.classList.remove('hidden');
@@ -343,14 +364,14 @@ async function generateData() {
     }
 }
 
-// Update the main chart with ground truth, Otava, and MA detected points
+// Update the stacked charts - one per enabled analysis method
 function updateChart(data) {
-    const ctx = mainChartCanvas.getContext('2d');
+    // Destroy existing charts
+    stackedCharts.forEach(chart => chart.destroy());
+    stackedCharts = [];
 
-    // Destroy existing chart
-    if (currentChart) {
-        currentChart.destroy();
-    }
+    // Clear container
+    stackedChartsContainer.innerHTML = '';
 
     // Prepare data
     const labels = data.data.map((_, i) => i);
@@ -403,217 +424,275 @@ function updateChart(data) {
         }
     });
 
-    // Create point styles for Otava detected points
-    const otavaPointColors = values.map((_, i) => {
-        if (detectedIndices.includes(i)) {
-            return matchedDetected.has(i) ? '#3b82f6' : '#ef4444';
-        }
-        return 'transparent';
+    // Create ground truth annotations (shared by all charts)
+    const createAnnotations = () => {
+        const annotations = {};
+        groundTruthIndices.forEach((idx, i) => {
+            const cp = data.ground_truth?.change_points?.find(cp => cp.index === idx);
+            annotations[`groundTruth${i}`] = {
+                type: 'line',
+                xMin: idx,
+                xMax: idx,
+                borderColor: '#10b981',
+                borderWidth: 2,
+                borderDash: [6, 4],
+                label: {
+                    display: true,
+                    content: cp ? `GT: ${cp.type}` : `GT: ${idx}`,
+                    position: 'start',
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    color: 'white',
+                    font: { size: 10 },
+                    padding: 3,
+                }
+            };
+        });
+        return annotations;
+    };
+
+    // Helper to create a chart container
+    const createChartContainer = (id, title, color, tpCount, fpCount) => {
+        const container = document.createElement('div');
+        container.className = 'stacked-chart';
+        container.id = `chart-${id}`;
+
+        const header = document.createElement('div');
+        header.className = 'stacked-chart-header';
+        header.innerHTML = `
+            <span class="method-indicator ${id}"></span>
+            <h4>${title}</h4>
+            <span class="detection-count">
+                <strong style="color: #10b981">${tpCount} TP</strong> /
+                <strong style="color: #ef4444">${fpCount} FP</strong>
+            </span>
+        `;
+
+        const canvas = document.createElement('canvas');
+        canvas.id = `canvas-${id}`;
+
+        container.appendChild(header);
+        container.appendChild(canvas);
+        stackedChartsContainer.appendChild(container);
+
+        return canvas;
+    };
+
+    // Common chart options
+    const getChartOptions = (annotations, showXAxis = false) => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            annotation: { annotations }
+        },
+        scales: {
+            x: {
+                display: showXAxis,
+                title: { display: showXAxis, text: 'Index' },
+                grid: { display: false }
+            },
+            y: {
+                min: parseInt(yMinInput.value),
+                max: parseInt(yMaxInput.value),
+                title: { display: true, text: 'Value' },
+                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            }
+        },
+        interaction: { intersect: false, mode: 'index' }
     });
 
-    const otavaPointBorders = values.map((_, i) => {
-        if (detectedIndices.includes(i)) {
-            return matchedDetected.has(i) ? '#2563eb' : '#dc2626';
-        }
-        return 'transparent';
-    });
+    // Track which is the last chart for showing X-axis
+    const enabledMethods = [];
+    if (runOtavaCheckbox.checked) enabledMethods.push('otava');
+    if (runMa) enabledMethods.push('ma');
+    if (runBoundary) enabledMethods.push('boundary');
 
-    const otavaPointRadii = values.map((_, i) => detectedIndices.includes(i) ? 8 : 0);
+    // Create Otava chart if enabled
+    if (runOtavaCheckbox.checked) {
+        const otavaTp = matchedDetected.size;
+        const otavaFp = detectedIndices.length - otavaTp;
+        const canvas = createChartContainer('otava', 'Otava Analysis', '#2563eb', otavaTp, otavaFp);
+        const ctx = canvas.getContext('2d');
 
-    // Create point styles for MA detected points
-    const maPointColors = values.map((_, i) => {
-        if (maDetectedIndices.includes(i)) {
-            return maMatchedIndices.has(i) ? '#8b5cf6' : '#f59e0b';
-        }
-        return 'transparent';
-    });
+        const otavaPointColors = values.map((_, i) => {
+            if (detectedIndices.includes(i)) {
+                return matchedDetected.has(i) ? '#3b82f6' : '#ef4444';
+            }
+            return 'transparent';
+        });
+        const otavaPointBorders = values.map((_, i) => {
+            if (detectedIndices.includes(i)) {
+                return matchedDetected.has(i) ? '#2563eb' : '#dc2626';
+            }
+            return 'transparent';
+        });
+        const otavaPointRadii = values.map((_, i) => detectedIndices.includes(i) ? 6 : 0);
 
-    const maPointBorders = values.map((_, i) => {
-        if (maDetectedIndices.includes(i)) {
-            return maMatchedIndices.has(i) ? '#7c3aed' : '#d97706';
-        }
-        return 'transparent';
-    });
-
-    const maPointRadii = values.map((_, i) => maDetectedIndices.includes(i) ? 8 : 0);
-
-    // Create point styles for Boundary detected points
-    const boundaryPointColors = values.map((_, i) => {
-        if (boundaryDetectedIndices.includes(i)) {
-            return boundaryMatchedIndices.has(i) ? '#06b6d4' : '#ec4899';
-        }
-        return 'transparent';
-    });
-
-    const boundaryPointBorders = values.map((_, i) => {
-        if (boundaryDetectedIndices.includes(i)) {
-            return boundaryMatchedIndices.has(i) ? '#0891b2' : '#db2777';
-        }
-        return 'transparent';
-    });
-
-    const boundaryPointRadii = values.map((_, i) => boundaryDetectedIndices.includes(i) ? 8 : 0);
-
-    // Create vertical line annotations for ground truth change points
-    const annotations = {};
-    groundTruthIndices.forEach((idx, i) => {
-        const cp = data.ground_truth?.change_points?.find(cp => cp.index === idx);
-        annotations[`groundTruth${i}`] = {
+        const isLast = enabledMethods[enabledMethods.length - 1] === 'otava';
+        const chart = new Chart(ctx, {
             type: 'line',
-            xMin: idx,
-            xMax: idx,
-            borderColor: '#10b981',
-            borderWidth: 2,
-            borderDash: [6, 4],
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: data.generator,
+                    data: values,
+                    borderColor: '#94a3b8',
+                    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+                    borderWidth: 1.5,
+                    fill: true,
+                    tension: 0,
+                    pointBackgroundColor: otavaPointColors,
+                    pointBorderColor: otavaPointBorders,
+                    pointBorderWidth: 1.5,
+                    pointRadius: otavaPointRadii,
+                    pointHoverRadius: 8,
+                    pointStyle: 'rectRot',
+                }]
+            },
+            options: getChartOptions(createAnnotations(), isLast)
+        });
+        stackedCharts.push(chart);
+    }
+
+    // Create MA chart if enabled
+    if (runMa) {
+        const maTp = maMatchedIndices.size;
+        const maFp = maDetectedIndices.length - maTp;
+        const canvas = createChartContainer('ma', 'Moving Average Analysis', '#8b5cf6', maTp, maFp);
+        const ctx = canvas.getContext('2d');
+
+        const maPointColors = values.map((_, i) => {
+            if (maDetectedIndices.includes(i)) {
+                return maMatchedIndices.has(i) ? '#8b5cf6' : '#f59e0b';
+            }
+            return 'transparent';
+        });
+        const maPointBorders = values.map((_, i) => {
+            if (maDetectedIndices.includes(i)) {
+                return maMatchedIndices.has(i) ? '#7c3aed' : '#d97706';
+            }
+            return 'transparent';
+        });
+        const maPointRadii = values.map((_, i) => maDetectedIndices.includes(i) ? 6 : 0);
+
+        const isLast = enabledMethods[enabledMethods.length - 1] === 'ma';
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'MA Detection',
+                    data: values,
+                    borderColor: '#94a3b8',
+                    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+                    borderWidth: 1.5,
+                    fill: true,
+                    tension: 0,
+                    pointBackgroundColor: maPointColors,
+                    pointBorderColor: maPointBorders,
+                    pointBorderWidth: 1.5,
+                    pointRadius: maPointRadii,
+                    pointHoverRadius: 8,
+                    pointStyle: 'circle',
+                }]
+            },
+            options: getChartOptions(createAnnotations(), isLast)
+        });
+        stackedCharts.push(chart);
+    }
+
+    // Create Boundary chart if enabled
+    if (runBoundary) {
+        const boundaryTp = boundaryMatchedIndices.size;
+        const boundaryFp = boundaryDetectedIndices.length - boundaryTp;
+        const canvas = createChartContainer('boundary', 'Boundary Analysis', '#06b6d4', boundaryTp, boundaryFp);
+        const ctx = canvas.getContext('2d');
+
+        const boundaryPointColors = values.map((_, i) => {
+            if (boundaryDetectedIndices.includes(i)) {
+                return boundaryMatchedIndices.has(i) ? '#06b6d4' : '#ec4899';
+            }
+            return 'transparent';
+        });
+        const boundaryPointBorders = values.map((_, i) => {
+            if (boundaryDetectedIndices.includes(i)) {
+                return boundaryMatchedIndices.has(i) ? '#0891b2' : '#db2777';
+            }
+            return 'transparent';
+        });
+        const boundaryPointRadii = values.map((_, i) => boundaryDetectedIndices.includes(i) ? 7 : 0);
+
+        // Add boundary line annotations
+        const annotations = createAnnotations();
+        annotations['upperBound'] = {
+            type: 'line',
+            yMin: upperBound,
+            yMax: upperBound,
+            borderColor: '#06b6d4',
+            borderWidth: 1,
+            borderDash: [4, 4],
             label: {
                 display: true,
-                content: cp ? `GT: ${cp.type}` : `GT: ${idx}`,
-                position: 'start',
-                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                content: `Upper: ${upperBound}`,
+                position: 'end',
+                backgroundColor: 'rgba(6, 182, 212, 0.8)',
                 color: 'white',
-                font: { size: 10 },
-                padding: 3,
+                font: { size: 9 },
+                padding: 2,
             }
         };
-    });
-
-    // Build datasets with different shapes:
-    // Otava: rectRot (diamond), MA: circle, Boundary: triangle
-    const datasets = [{
-        label: data.generator,
-        data: values,
-        borderColor: '#94a3b8',
-        backgroundColor: 'rgba(148, 163, 184, 0.1)',
-        borderWidth: 1.5,
-        fill: true,
-        tension: 0,
-        pointBackgroundColor: otavaPointColors,
-        pointBorderColor: otavaPointBorders,
-        pointBorderWidth: 2,
-        pointRadius: otavaPointRadii,
-        pointHoverRadius: 10,
-        pointStyle: 'rectRot',  // Diamond shape for Otava
-    }];
-
-    // Add MA dataset if enabled (circle shape)
-    if (runMa) {
-        datasets.push({
-            label: 'MA Detection',
-            data: values,
-            borderColor: 'transparent',
-            backgroundColor: 'transparent',
-            borderWidth: 0,
-            fill: false,
-            pointBackgroundColor: maPointColors,
-            pointBorderColor: maPointBorders,
-            pointBorderWidth: 2,
-            pointRadius: maPointRadii,
-            pointHoverRadius: 10,
-            pointStyle: 'circle',  // Circle shape for MA
-        });
-    }
-
-    // Add Boundary dataset if enabled (triangle shape)
-    if (runBoundary) {
-        datasets.push({
-            label: 'Boundary Detection',
-            data: values,
-            borderColor: 'transparent',
-            backgroundColor: 'transparent',
-            borderWidth: 0,
-            fill: false,
-            pointBackgroundColor: boundaryPointColors,
-            pointBorderColor: boundaryPointBorders,
-            pointBorderWidth: 2,
-            pointRadius: boundaryPointRadii,
-            pointHoverRadius: 10,
-            pointStyle: 'triangle',  // Triangle shape for Boundary
-        });
-    }
-
-    currentChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false,
-                },
-                annotation: {
-                    annotations: annotations
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const idx = context.dataIndex;
-                            let label = `Value: ${context.parsed.y.toFixed(2)}`;
-
-                            if (groundTruthIndices.includes(idx)) {
-                                const cp = data.ground_truth?.change_points?.find(cp => cp.index === idx);
-                                if (cp) {
-                                    label += ` | Ground Truth: ${cp.type}`;
-                                }
-                            }
-
-                            if (detectedIndices.includes(idx)) {
-                                const detected = data.otava?.detected_change_points?.find(d => d.index === idx);
-                                if (detected) {
-                                    label += ` | Otava: p=${detected.pvalue.toExponential(2)}`;
-                                }
-                            }
-
-                            if (maDetectedIndices.includes(idx)) {
-                                const maDetail = maResult.details.find(d => d.index === idx);
-                                if (maDetail) {
-                                    label += ` | MA: diff=${maDetail.diff}`;
-                                }
-                            }
-
-                            if (boundaryDetectedIndices.includes(idx)) {
-                                const boundaryDetail = boundaryResult.details.find(d => d.index === idx);
-                                if (boundaryDetail) {
-                                    label += ` | Boundary: ${boundaryDetail.boundary}=${boundaryDetail.threshold}`;
-                                }
-                            }
-
-                            return label;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Index',
-                    },
-                    grid: {
-                        display: false,
-                    }
-                },
-                y: {
-                    min: parseInt(yMinInput.value),
-                    max: parseInt(yMaxInput.value),
-                    title: {
-                        display: true,
-                        text: 'Value',
-                    },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)',
-                    }
-                }
-            },
-            interaction: {
-                intersect: false,
-                mode: 'index',
+        annotations['lowerBound'] = {
+            type: 'line',
+            yMin: lowerBound,
+            yMax: lowerBound,
+            borderColor: '#06b6d4',
+            borderWidth: 1,
+            borderDash: [4, 4],
+            label: {
+                display: true,
+                content: `Lower: ${lowerBound}`,
+                position: 'end',
+                backgroundColor: 'rgba(6, 182, 212, 0.8)',
+                color: 'white',
+                font: { size: 9 },
+                padding: 2,
             }
-        }
-    });
+        };
+
+        const isLast = enabledMethods[enabledMethods.length - 1] === 'boundary';
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Boundary Detection',
+                    data: values,
+                    borderColor: '#94a3b8',
+                    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+                    borderWidth: 1.5,
+                    fill: true,
+                    tension: 0,
+                    pointBackgroundColor: boundaryPointColors,
+                    pointBorderColor: boundaryPointBorders,
+                    pointBorderWidth: 1.5,
+                    pointRadius: boundaryPointRadii,
+                    pointHoverRadius: 9,
+                    pointStyle: 'triangle',
+                }]
+            },
+            options: getChartOptions(annotations, isLast)
+        });
+        stackedCharts.push(chart);
+    }
+
+    // If no methods enabled, show a message
+    if (enabledMethods.length === 0) {
+        stackedChartsContainer.innerHTML = `
+            <div class="stacked-chart" style="text-align: center; padding: 2rem;">
+                <p style="color: #64748b;">Enable at least one analysis method to see the chart.</p>
+            </div>
+        `;
+    }
 
     // Store MA result for stats display
     data._maResult = maResult;
@@ -759,7 +838,7 @@ async function showAllPatterns() {
         }
 
         // Hide single chart view
-        document.querySelector('.chart-container').classList.add('hidden');
+        document.querySelector('.stacked-charts-container').classList.add('hidden');
         document.querySelector('.chart-legend').classList.add('hidden');
         statsSection.classList.add('hidden');
         accuracyMetrics.classList.add('hidden');

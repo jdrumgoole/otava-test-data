@@ -3,7 +3,7 @@
 project = "otava-test-data"
 copyright = "2025, Joe Drumgoole"
 author = "Joe Drumgoole"
-version = "0.1.0"
+version = "0.1.3"
 
 extensions = [
     "sphinx.ext.autodoc",
