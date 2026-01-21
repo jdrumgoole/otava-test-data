@@ -2,13 +2,42 @@
 
 Test data generators and benchmarks for [Apache Otava](https://github.com/apache/otava) change point detection.
 
-## Overview
+## Web Visualizer
 
-This package provides Python generators for creating synthetic time series data with known change points. It enables:
+The package includes an interactive web visualizer for exploring test patterns and comparing change point detection results against ground truth.
 
-1. **Testing Otava** - Verify Otava correctly detects change points in controlled scenarios
-2. **Benchmarking** - Compare Otava against other change detection algorithms
-3. **Education** - Understand what change point detection does with benchmark results
+![Step Function Detection](https://otava-test-data.readthedocs.io/en/latest/_static/screenshots/readme-step-function.png)
+
+**Features:**
+- Generate and visualize 17 different test patterns
+- Compare three analysis methods: Otava (statistical), Moving Average, and Boundary detection
+- View accuracy metrics (precision, recall, F1 score)
+- Adjust parameters in real-time and see results instantly
+
+### Multiple Change Points
+
+Detect multiple successive changes in your data:
+
+![Multiple Changes Detection](https://otava-test-data.readthedocs.io/en/latest/_static/screenshots/readme-multiple-changes.png)
+
+### Variance Changes
+
+Detect changes in data volatility even when the mean stays constant:
+
+![Variance Change Detection](https://otava-test-data.readthedocs.io/en/latest/_static/screenshots/readme-variance-change.png)
+
+### Starting the Visualizer
+
+```bash
+pip install otava-test-data[web]
+
+# Start the web server
+otava-web
+# Or with invoke tasks
+inv web-start
+```
+
+Then open http://127.0.0.1:8100 in your browser.
 
 ## Installation
 
@@ -16,10 +45,10 @@ This package provides Python generators for creating synthetic time series data 
 pip install otava-test-data
 ```
 
-Or with development dependencies:
+Or with all optional dependencies:
 
 ```bash
-pip install otava-test-data[dev,docs]
+pip install otava-test-data[all]
 ```
 
 ## Quick Start
@@ -62,9 +91,7 @@ for cp in combined.change_points:
 | `phase_change` | Phase shift in periodic signal |
 | `multiple_changes` | Multiple consecutive step changes |
 
-## Generating Test Data
-
-### Using the CLI
+## CLI Tool
 
 ```bash
 # Generate test suite
@@ -77,69 +104,9 @@ otava-gen list
 otava-gen info step_function
 ```
 
-### Using Invoke Tasks
+## Documentation
 
-```bash
-# Generate test data
-inv generate --output-dir ./test_data
-
-# Run tests
-inv test
-
-# Build documentation
-inv docs-init
-inv docs-build
-```
-
-## Web Visualizer
-
-The package includes an interactive web visualizer for exploring test patterns and comparing Otava's detection results against ground truth.
-
-```bash
-# Start the web server
-inv web-start
-
-# Or run in foreground
-inv web --port 8100
-
-# Check server status
-inv web-status
-
-# Stop the server
-inv web-stop
-```
-
-Then open http://127.0.0.1:8100 in your browser to:
-- Generate and visualize any test pattern
-- Run Otava detection with configurable parameters
-- Compare ground truth vs detected change points
-- View accuracy metrics (precision, recall, F1 score)
-
-## Running Tests
-
-```bash
-# All tests
-inv test
-
-# Generator tests only (no Otava required)
-inv test-generators
-
-# Otava integration tests
-inv test-otava
-```
-
-## Problem Domain
-
-This project focuses on performance testing scenarios where:
-
-- A performance test runs repeatedly, generating time series measurements
-- Ideally produces constant values, but includes random noise
-- We assume approximately normal distribution of noise
-- Performance regressions/improvements appear as discrete steps
-
-Things we do **NOT** model (not typical in perf testing):
-- Trending (constant increase/decrease)
-- Seasonality (time-of-day/week/year patterns)
+Full documentation available at [Read the Docs](https://otava-test-data.readthedocs.io/).
 
 ## License
 
