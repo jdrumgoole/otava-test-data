@@ -1,0 +1,74 @@
+[project]
+name = "otava-test-data"
+version = "0.1.0"
+description = "Test data generators and benchmarks for Apache Otava change point detection"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Joe Drumgoole" }
+]
+keywords = ["change-point-detection", "benchmarking", "time-series", "testing", "otava"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+]
+
+dependencies = [
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "apache-otava>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "invoke>=2.0.0",
+    "ruff>=0.1.0",
+]
+docs = [
+    "sphinx>=7.0.0",
+    "myst-parser>=2.0.0",
+    "sphinx-rtd-theme>=2.0.0",
+]
+web = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.6",
+]
+all = [
+    "otava-test-data[dev,docs,web]",
+]
+
+[project.scripts]
+otava-gen = "otava_test_data.cli:main"
+otava-web = "otava_test_data.web.main:run"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/otava_test_data"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/otava_test_data/tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
