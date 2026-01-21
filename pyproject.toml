@@ -1,6 +1,6 @@
 [project]
 name = "otava-test-data"
-version = "0.1.0"
+version = "0.1.1"
 description = "Test data generators and benchmarks for Apache Otava change point detection"
 readme = "README.md"
 requires-python = ">=3.10"
