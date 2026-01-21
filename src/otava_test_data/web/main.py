@@ -42,6 +42,21 @@ WEB_DIR = Path(__file__).parent
 TEMPLATES_DIR = WEB_DIR / "templates"
 STATIC_DIR = WEB_DIR / "static"
 
+
+def sanitize_for_json(obj: Any) -> Any:
+    """Recursively convert numpy types to Python native types for JSON serialization."""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [sanitize_for_json(item) for item in obj]
+    return obj
+
 # FastAPI app
 app = FastAPI(
     title="Otava Test Data Visualizer",
@@ -186,6 +201,16 @@ GENERATORS = {
             "sigma": {"type": "float", "default": 5.0, "min": 0, "max": 20, "step": 0.5},
         },
     },
+    "multiple_variance_changes": {
+        "func": multiple_variance_changes,
+        "name": "Multiple Variance Changes",
+        "description": "Multiple variance changes, constant mean",
+        "category": "advanced",
+        "has_change_points": True,
+        "params": {
+            "mean": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
+        },
+    },
 }
 
 
@@ -309,9 +334,9 @@ def compute_accuracy_metrics(
                 matched_truth.add(g_idx)
                 matched_detected.add(d_idx)
                 matched_pairs.append({
-                    "ground_truth": g_idx,
-                    "detected": d_idx,
-                    "offset": d_idx - g_idx,
+                    "ground_truth": int(g_idx),
+                    "detected": int(d_idx),
+                    "offset": int(d_idx - g_idx),
                 })
                 break
 
@@ -345,37 +370,40 @@ def timeseries_to_dict(
     otava_params: dict | None = None,
 ) -> dict[str, Any]:
     """Convert TimeSeries to JSON-serializable dict, optionally with Otava analysis."""
+    # Convert change point indices to regular Python int to avoid numpy serialization issues
+    change_point_indices = [int(i) for i in ts.get_change_point_indices()]
+
     result = {
         "data": ts.data.tolist(),
         "length": len(ts),
         "generator": ts.generator_name,
-        "parameters": ts.parameters,
+        "parameters": sanitize_for_json(ts.parameters),
         "ground_truth": {
             "change_points": [
                 {
-                    "index": cp.index,
+                    "index": int(cp.index),
                     "type": cp.change_type,
-                    "before_value": cp.before_value,
-                    "after_value": cp.after_value,
+                    "before_value": float(cp.before_value) if cp.before_value is not None else None,
+                    "after_value": float(cp.after_value) if cp.after_value is not None else None,
                     "description": cp.description,
                 }
                 for cp in ts.change_points
             ],
-            "indices": ts.get_change_point_indices(),
+            "indices": change_point_indices,
             "count": len(ts.change_points),
         },
         # Keep for backward compatibility
         "change_points": [
             {
-                "index": cp.index,
+                "index": int(cp.index),
                 "type": cp.change_type,
-                "before_value": cp.before_value,
-                "after_value": cp.after_value,
+                "before_value": float(cp.before_value) if cp.before_value is not None else None,
+                "after_value": float(cp.after_value) if cp.after_value is not None else None,
                 "description": cp.description,
             }
             for cp in ts.change_points
         ],
-        "change_point_indices": ts.get_change_point_indices(),
+        "change_point_indices": change_point_indices,
     }
 
     if include_otava:
