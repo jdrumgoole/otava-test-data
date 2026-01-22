@@ -162,6 +162,74 @@ main {
     color: var(--primary-color);
 }
 
+.slider-row input[type="number"] {
+    width: 5em;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* Slider with configurable bounds */
+.slider-with-bounds {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.slider-with-bounds input[type="range"] {
+    flex: 1;
+    min-width: 100px;
+}
+
+.slider-with-bounds .bound-input {
+    width: 4.5em;
+    padding: 0.25rem 0.3rem;
+    font-size: 0.75rem;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    background: var(--background);
+}
+
+.slider-with-bounds .bound-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+.slider-with-bounds .value-input {
+    width: 5em;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.85rem;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.slider-with-bounds .value-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* Y-Axis slider groups in toolbar */
+.analysis-toolbar .y-axis-group {
+    flex: 0 1 420px;
+    min-width: 330px;
+}
+
+.analysis-toolbar .y-axis-group .slider-with-bounds input[type="range"] {
+    min-width: 120px;
+}
+
+/* Length slider group */
+.top-controls .length-group {
+    flex: 0 1 450px;
+    max-width: 450px;
+}
+
 .seed-input {
     width: 5em !important;
     text-align: center;

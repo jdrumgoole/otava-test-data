@@ -10,8 +10,10 @@ let generators = {};
 
 // DOM Elements - Data Generation
 const generatorSelect = document.getElementById('generator-select');
+const lengthSlider = document.getElementById('length-slider');
 const lengthInput = document.getElementById('length-input');
-const lengthValue = document.getElementById('length-value');
+const lengthMin = document.getElementById('length-min');
+const lengthMax = document.getElementById('length-max');
 const seedInput = document.getElementById('seed-input');
 const dynamicParams = document.getElementById('dynamic-params');
 
@@ -21,6 +23,12 @@ const windowLenInput = document.getElementById('window-len-input');
 const maxPvalueInput = document.getElementById('max-pvalue-input');
 const yMinInput = document.getElementById('y-min-input');
 const yMaxInput = document.getElementById('y-max-input');
+const yMinSlider = document.getElementById('y-min-slider');
+const yMaxSlider = document.getElementById('y-max-slider');
+const yMinBoundMin = document.getElementById('y-min-bound-min');
+const yMinBoundMax = document.getElementById('y-min-bound-max');
+const yMaxBoundMin = document.getElementById('y-max-bound-min');
+const yMaxBoundMax = document.getElementById('y-max-bound-max');
 
 // DOM Elements - Moving Average Controls
 const runMaCheckbox = document.getElementById('run-ma-checkbox');
@@ -90,6 +98,71 @@ async function loadGenerators() {
     }
 }
 
+// Helper function to setup a slider with configurable bounds
+function setupSliderWithBounds(slider, valueInput, minBoundInput, maxBoundInput, onChange) {
+    // Sync slider to value input
+    slider.addEventListener('input', () => {
+        valueInput.value = slider.value;
+    });
+    slider.addEventListener('change', onChange);
+
+    // Sync value input to slider
+    valueInput.addEventListener('input', () => {
+        const val = parseFloat(valueInput.value);
+        const min = parseFloat(slider.min);
+        const max = parseFloat(slider.max);
+        if (val >= min && val <= max) {
+            slider.value = val;
+        }
+    });
+    valueInput.addEventListener('change', () => {
+        // Clamp value to bounds
+        const val = parseFloat(valueInput.value);
+        const min = parseFloat(slider.min);
+        const max = parseFloat(slider.max);
+        valueInput.value = Math.max(min, Math.min(max, val));
+        slider.value = valueInput.value;
+        onChange();
+    });
+
+    // Update slider bounds when min/max inputs change
+    minBoundInput.addEventListener('change', () => {
+        const newMin = parseFloat(minBoundInput.value);
+        const currentMax = parseFloat(maxBoundInput.value);
+        if (newMin < currentMax) {
+            slider.min = newMin;
+            valueInput.min = newMin;
+            // Adjust current value if needed
+            if (parseFloat(valueInput.value) < newMin) {
+                valueInput.value = newMin;
+                slider.value = newMin;
+            }
+            onChange();
+        } else {
+            // Reset to previous valid value
+            minBoundInput.value = slider.min;
+        }
+    });
+
+    maxBoundInput.addEventListener('change', () => {
+        const newMax = parseFloat(maxBoundInput.value);
+        const currentMin = parseFloat(minBoundInput.value);
+        if (newMax > currentMin) {
+            slider.max = newMax;
+            valueInput.max = newMax;
+            // Adjust current value if needed
+            if (parseFloat(valueInput.value) > newMax) {
+                valueInput.value = newMax;
+                slider.value = newMax;
+            }
+            onChange();
+        } else {
+            // Reset to previous valid value
+            maxBoundInput.value = slider.max;
+        }
+    });
+}
+
 // Setup event listeners
 function setupEventListeners() {
     generatorSelect.addEventListener('change', () => {
@@ -98,11 +171,9 @@ function setupEventListeners() {
         generateData();
     });
 
-    lengthInput.addEventListener('input', () => {
-        lengthValue.textContent = lengthInput.value;
-    });
+    // Length slider with bounds
+    setupSliderWithBounds(lengthSlider, lengthInput, lengthMin, lengthMax, generateData);
 
-    lengthInput.addEventListener('change', generateData);
     seedInput.addEventListener('change', generateData);
     generateBtn.addEventListener('click', generateData);
     showAllBtn.addEventListener('click', showAllPatterns);
@@ -111,8 +182,12 @@ function setupEventListeners() {
     runOtavaCheckbox.addEventListener('change', generateData);
     windowLenInput.addEventListener('change', generateData);
     maxPvalueInput.addEventListener('change', generateData);
-    yMinInput.addEventListener('change', generateData);
-    yMaxInput.addEventListener('change', generateData);
+
+    // Y-Axis Min slider with bounds
+    setupSliderWithBounds(yMinSlider, yMinInput, yMinBoundMin, yMinBoundMax, generateData);
+
+    // Y-Axis Max slider with bounds
+    setupSliderWithBounds(yMaxSlider, yMaxInput, yMaxBoundMin, yMaxBoundMax, generateData);
 
     // Moving Average controls
     runMaCheckbox.addEventListener('change', generateData);

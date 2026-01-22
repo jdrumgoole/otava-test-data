@@ -46,9 +46,11 @@
 
             <div class="control-group length-group">
                 <label for="length-input">Length:</label>
-                <div class="slider-row">
-                    <input type="range" id="length-input" min="50" max="1000" value="{{ default_length }}" step="10">
-                    <span id="length-value">{{ default_length }}</span>
+                <div class="slider-with-bounds">
+                    <input type="number" id="length-min" class="bound-input" value="50" min="10" max="5000" step="10" title="Min bound">
+                    <input type="range" id="length-slider" min="50" max="1000" value="{{ default_length }}" step="10">
+                    <input type="number" id="length-max" class="bound-input" value="1000" min="10" max="5000" step="10" title="Max bound">
+                    <input type="number" id="length-input" class="value-input" value="{{ default_length }}" min="50" max="1000" step="10">
                 </div>
             </div>
 
@@ -72,14 +74,24 @@
                     <button id="show-all-btn" class="btn-secondary">Show All Graphs</button>
                 </div>
 
-                <div class="control-group">
+                <div class="control-group y-axis-group">
                     <label for="y-min-input">Y-Axis Min:</label>
-                    <input type="number" id="y-min-input" value="40" min="0" max="500" step="10">
+                    <div class="slider-with-bounds">
+                        <input type="number" id="y-min-bound-min" class="bound-input" value="0" min="-1000" max="1000" step="10" title="Min bound">
+                        <input type="range" id="y-min-slider" min="0" max="500" value="40" step="10">
+                        <input type="number" id="y-min-bound-max" class="bound-input" value="500" min="-1000" max="1000" step="10" title="Max bound">
+                        <input type="number" id="y-min-input" class="value-input" value="40" min="0" max="500" step="10">
+                    </div>
                 </div>
 
-                <div class="control-group">
+                <div class="control-group y-axis-group">
                     <label for="y-max-input">Y-Axis Max:</label>
-                    <input type="number" id="y-max-input" value="160" min="0" max="500" step="10">
+                    <div class="slider-with-bounds">
+                        <input type="number" id="y-max-bound-min" class="bound-input" value="0" min="-1000" max="1000" step="10" title="Min bound">
+                        <input type="range" id="y-max-slider" min="0" max="500" value="160" step="10">
+                        <input type="number" id="y-max-bound-max" class="bound-input" value="500" min="-1000" max="1000" step="10" title="Max bound">
+                        <input type="number" id="y-max-input" class="value-input" value="160" min="0" max="500" step="10">
+                    </div>
                 </div>
             </div>
 
