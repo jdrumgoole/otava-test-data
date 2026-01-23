@@ -6,7 +6,7 @@ with known change points for testing and benchmarking change point detection
 algorithms.
 """
 
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 from otava_test_data.generators.basic import (
     constant,
