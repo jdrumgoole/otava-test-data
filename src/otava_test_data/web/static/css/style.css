@@ -37,7 +37,16 @@ header {
     background: linear-gradient(135deg, var(--primary-color), #1e40af);
     color: white;
     padding: 0.75rem 1rem;
-    text-align: center;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left {
+    text-align: left;
 }
 
 header h1 {
@@ -48,6 +57,126 @@ header h1 {
 header .subtitle {
     opacity: 0.9;
     font-size: 0.8rem;
+}
+
+header .version {
+    text-align: left;
+    font-size: 0.65rem;
+    opacity: 0.7;
+    margin-top: 0.25rem;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+.settings-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.settings-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Settings Dialog */
+.settings-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.settings-dialog.hidden {
+    display: none;
+}
+
+.settings-dialog-content {
+    background: var(--surface);
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 450px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.settings-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.settings-dialog-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.settings-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.settings-close-btn:hover {
+    color: var(--text-primary);
+}
+
+.settings-dialog-body {
+    padding: 1.25rem;
+}
+
+.settings-group {
+    margin-bottom: 1.25rem;
+}
+
+.settings-group:last-child {
+    margin-bottom: 0;
+}
+
+.settings-group > label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.settings-group .slider-with-bounds {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.settings-group .seed-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
 }
 
 main {

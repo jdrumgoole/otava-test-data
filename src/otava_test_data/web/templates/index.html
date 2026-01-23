@@ -10,9 +10,47 @@
 </head>
 <body>
     <header>
-        <h1>Otava Test Data Visualizer</h1>
-        <p class="subtitle">Interactive visualization of change point detection with Apache Otava</p>
+        <div class="header-content">
+            <div class="header-left">
+                <h1>Otava Test Data Visualizer</h1>
+                <p class="subtitle">Interactive visualization of change point detection with Apache Otava</p>
+            </div>
+            <div class="header-right">
+                <button id="settings-btn" class="settings-btn" title="Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <p class="version">v{{ version }}</p>
     </header>
+
+    <!-- Settings Dialog -->
+    <div id="settings-dialog" class="settings-dialog hidden">
+        <div class="settings-dialog-content">
+            <div class="settings-dialog-header">
+                <h3>Settings</h3>
+                <button id="settings-close-btn" class="settings-close-btn">&times;</button>
+            </div>
+            <div class="settings-dialog-body">
+                <div class="settings-group">
+                    <label for="length-input">Data Length:</label>
+                    <div class="slider-with-bounds">
+                        <input type="number" id="length-min" class="bound-input" value="50" min="10" max="5000" step="10" title="Min bound">
+                        <input type="range" id="length-slider" min="50" max="1000" value="{{ default_length }}" step="10">
+                        <input type="number" id="length-max" class="bound-input" value="1000" min="10" max="5000" step="10" title="Max bound">
+                        <input type="number" id="length-input" class="value-input" value="{{ default_length }}" min="50" max="1000" step="10">
+                    </div>
+                </div>
+                <div class="settings-group">
+                    <label for="seed-input">Random Seed:</label>
+                    <input type="number" id="seed-input" class="seed-input" value="42" min="0" max="9999">
+                </div>
+            </div>
+        </div>
+    </div>
 
     <main>
         <!-- Data Generation Controls -->
@@ -42,21 +80,6 @@
                         {% endfor %}
                     </optgroup>
                 </select>
-            </div>
-
-            <div class="control-group length-group">
-                <label for="length-input">Length:</label>
-                <div class="slider-with-bounds">
-                    <input type="number" id="length-min" class="bound-input" value="50" min="10" max="5000" step="10" title="Min bound">
-                    <input type="range" id="length-slider" min="50" max="1000" value="{{ default_length }}" step="10">
-                    <input type="number" id="length-max" class="bound-input" value="1000" min="10" max="5000" step="10" title="Max bound">
-                    <input type="number" id="length-input" class="value-input" value="{{ default_length }}" min="50" max="1000" step="10">
-                </div>
-            </div>
-
-            <div class="control-group seed-group">
-                <label for="seed-input">Seed:</label>
-                <input type="number" id="seed-input" class="seed-input" value="42" min="0" max="9999">
             </div>
 
             <div id="dynamic-params" class="dynamic-params">

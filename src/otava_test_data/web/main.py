@@ -41,6 +41,7 @@ from otava_test_data.generators.advanced import (
     multiple_variance_changes,
 )
 from otava_test_data.generators.combiner import add_noise, CombinationGenerator
+from otava_test_data import __version__
 
 # Paths
 WEB_DIR = Path(__file__).parent
@@ -66,7 +67,7 @@ def sanitize_for_json(obj: Any) -> Any:
 app = FastAPI(
     title="Otava Test Data Visualizer",
     description="Visualize time series test data for Apache Otava change point detection",
-    version="0.1.0",
+    version=__version__,
 )
 
 # Mount static files
@@ -512,6 +513,7 @@ async def index(request: Request):
             "request": request,
             "generators": GENERATORS,
             "default_length": 200,
+            "version": __version__,
         },
     )
 

@@ -80,6 +80,11 @@ const multiChartContainer = document.getElementById('multi-chart-container');
 const chartGrid = document.getElementById('chart-grid');
 const summaryStats = document.getElementById('summary-stats');
 
+// DOM Elements - Settings Dialog
+const settingsBtn = document.getElementById('settings-btn');
+const settingsDialog = document.getElementById('settings-dialog');
+const settingsCloseBtn = document.getElementById('settings-close-btn');
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     await loadGenerators();
@@ -169,6 +174,29 @@ function setupEventListeners() {
         updateGeneratorInfo();
         updateDynamicParams();
         generateData();
+    });
+
+    // Settings dialog
+    settingsBtn.addEventListener('click', () => {
+        settingsDialog.classList.remove('hidden');
+    });
+
+    settingsCloseBtn.addEventListener('click', () => {
+        settingsDialog.classList.add('hidden');
+    });
+
+    // Close dialog when clicking outside
+    settingsDialog.addEventListener('click', (e) => {
+        if (e.target === settingsDialog) {
+            settingsDialog.classList.add('hidden');
+        }
+    });
+
+    // Close dialog on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !settingsDialog.classList.contains('hidden')) {
+            settingsDialog.classList.add('hidden');
+        }
     });
 
     // Length slider with bounds

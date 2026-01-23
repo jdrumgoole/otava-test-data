@@ -25,13 +25,16 @@ Then open http://127.0.0.1:8100 in your browser.
 The visualizer provides:
 
 - **Generator Selection**: Choose from 12 different test pattern generators
+- **Settings Dialog**: Access global settings (Length, Seed) via the gear icon in the top-right corner
 - **Parameter Controls**: Adjust generator-specific parameters
 - **Otava Analysis**: Run change point detection and view results
 - **Accuracy Metrics**: Compare detected vs ground truth change points
 
+![Settings dialog](_static/screenshots/settings-dialog-visible.png)
+
 ## Common Parameters
 
-These parameters appear across multiple generators:
+These parameters are accessible via the **Settings** button (gear icon) in the top-right corner of the header:
 
 ### Length
 
