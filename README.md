@@ -1,6 +1,6 @@
 # Otava Test Data
 
-Test data generators and benchmarks for [Apache Otava](https://github.com/apache/otava) change point detection.
+Test data generators and Visualization for [Apache Otava](https://github.com/apache/otava) change point detection.
 
 ## Web Visualizer
 
