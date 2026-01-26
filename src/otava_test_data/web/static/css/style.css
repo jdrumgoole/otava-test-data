@@ -751,17 +751,9 @@ footer a:hover {
     cursor: pointer;
 }
 
-/* Chart Legend */
+/* Chart Legend - hidden as markers are self-explanatory */
 .chart-legend {
-    background: var(--surface);
-    border-radius: 8px;
-    padding: 0.4rem 0.75rem;
-    margin-bottom: 0.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 0.75rem;
-    justify-content: center;
+    display: none;
 }
 
 .legend-item {
@@ -799,70 +791,22 @@ footer a:hover {
     );
 }
 
-.legend-marker.otava-detected {
-    background: #3b82f6;
-    border: 2px solid #2563eb;
-    border-radius: 0;
-    transform: rotate(45deg);
+.legend-marker.true-positive {
+    background: #f87171;
+    border: 2px solid #ef4444;
+    border-radius: 50%;
     width: 10px;
     height: 10px;
 }
 
 .legend-marker.false-positive {
-    background: #ef4444;
-    border: 2px solid #dc2626;
-    border-radius: 0;
-    transform: rotate(45deg);
-    width: 10px;
-    height: 10px;
-}
-
-.legend-marker.ma-detected {
-    background: #8b5cf6;
-    border: 2px solid #7c3aed;
-}
-
-.legend-marker.ma-false-positive {
-    background: #f59e0b;
-    border: 2px solid #d97706;
-}
-
-.legend-marker.boundary-detected {
     background: transparent;
     border-radius: 0;
     width: 0;
     height: 0;
     border-style: solid;
-    border-width: 0 6px 12px 6px;
-    border-color: transparent transparent #06b6d4 transparent;
-}
-
-.legend-marker.boundary-false-positive {
-    background: transparent;
-    border-radius: 0;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-width: 0 6px 12px 6px;
-    border-color: transparent transparent #ec4899 transparent;
-}
-
-.legend-marker.threshold-detected {
-    background: #ec4899;
-    border: 2px solid #db2777;
-    border-radius: 0;
-    width: 10px;
-    height: 10px;
-    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-}
-
-.legend-marker.threshold-false-positive {
-    background: #f97316;
-    border: 2px solid #ea580c;
-    border-radius: 0;
-    width: 10px;
-    height: 10px;
-    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    border-width: 0 6px 10px 6px;
+    border-color: transparent transparent #f97316 transparent;
 }
 
 /* Moving Average Controls Section */

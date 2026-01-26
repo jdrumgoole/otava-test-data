@@ -635,8 +635,8 @@ function updateChart(data) {
             <span class="method-indicator ${id}"></span>
             <h4>${title}</h4>
             <span class="detection-count">
-                <strong style="color: #10b981">${tpCount} TP</strong> /
-                <strong style="color: #ef4444">${fpCount} FP</strong>
+                <strong style="color: #ef4444">${tpCount} TP</strong> /
+                <strong style="color: #f97316">${fpCount} FP</strong>
             </span>
         `;
 
@@ -690,17 +690,23 @@ function updateChart(data) {
 
         const otavaPointColors = values.map((_, i) => {
             if (detectedIndices.includes(i)) {
-                return matchedDetected.has(i) ? '#3b82f6' : '#ef4444';
+                return matchedDetected.has(i) ? '#f87171' : '#f97316';
             }
             return 'transparent';
         });
         const otavaPointBorders = values.map((_, i) => {
             if (detectedIndices.includes(i)) {
-                return matchedDetected.has(i) ? '#2563eb' : '#dc2626';
+                return matchedDetected.has(i) ? '#ef4444' : '#ea580c';
             }
             return 'transparent';
         });
         const otavaPointRadii = values.map((_, i) => detectedIndices.includes(i) ? 6 : 0);
+        const otavaPointStyles = values.map((_, i) => {
+            if (detectedIndices.includes(i)) {
+                return matchedDetected.has(i) ? 'circle' : 'triangle';
+            }
+            return 'circle';
+        });
 
         const isLast = enabledMethods[enabledMethods.length - 1] === 'otava';
         const chart = new Chart(ctx, {
@@ -720,7 +726,7 @@ function updateChart(data) {
                     pointBorderWidth: 1.5,
                     pointRadius: otavaPointRadii,
                     pointHoverRadius: 8,
-                    pointStyle: 'rectRot',
+                    pointStyle: otavaPointStyles,
                 }]
             },
             options: getChartOptions(createAnnotations(), isLast)
@@ -737,17 +743,23 @@ function updateChart(data) {
 
         const maPointColors = values.map((_, i) => {
             if (maDetectedIndices.includes(i)) {
-                return maMatchedIndices.has(i) ? '#8b5cf6' : '#f59e0b';
+                return maMatchedIndices.has(i) ? '#f87171' : '#f97316';
             }
             return 'transparent';
         });
         const maPointBorders = values.map((_, i) => {
             if (maDetectedIndices.includes(i)) {
-                return maMatchedIndices.has(i) ? '#7c3aed' : '#d97706';
+                return maMatchedIndices.has(i) ? '#ef4444' : '#ea580c';
             }
             return 'transparent';
         });
         const maPointRadii = values.map((_, i) => maDetectedIndices.includes(i) ? 6 : 0);
+        const maPointStyles = values.map((_, i) => {
+            if (maDetectedIndices.includes(i)) {
+                return maMatchedIndices.has(i) ? 'circle' : 'triangle';
+            }
+            return 'circle';
+        });
 
         const isLast = enabledMethods[enabledMethods.length - 1] === 'ma';
         const chart = new Chart(ctx, {
@@ -767,7 +779,7 @@ function updateChart(data) {
                     pointBorderWidth: 1.5,
                     pointRadius: maPointRadii,
                     pointHoverRadius: 8,
-                    pointStyle: 'circle',
+                    pointStyle: maPointStyles,
                 }]
             },
             options: getChartOptions(createAnnotations(), isLast)
@@ -784,17 +796,23 @@ function updateChart(data) {
 
         const boundaryPointColors = values.map((_, i) => {
             if (boundaryDetectedIndices.includes(i)) {
-                return boundaryMatchedIndices.has(i) ? '#06b6d4' : '#ec4899';
+                return boundaryMatchedIndices.has(i) ? '#f87171' : '#f97316';
             }
             return 'transparent';
         });
         const boundaryPointBorders = values.map((_, i) => {
             if (boundaryDetectedIndices.includes(i)) {
-                return boundaryMatchedIndices.has(i) ? '#0891b2' : '#db2777';
+                return boundaryMatchedIndices.has(i) ? '#ef4444' : '#ea580c';
             }
             return 'transparent';
         });
-        const boundaryPointRadii = values.map((_, i) => boundaryDetectedIndices.includes(i) ? 7 : 0);
+        const boundaryPointRadii = values.map((_, i) => boundaryDetectedIndices.includes(i) ? 6 : 0);
+        const boundaryPointStyles = values.map((_, i) => {
+            if (boundaryDetectedIndices.includes(i)) {
+                return boundaryMatchedIndices.has(i) ? 'circle' : 'triangle';
+            }
+            return 'circle';
+        });
 
         // Add boundary line annotations
         const annotations = createAnnotations();
@@ -850,8 +868,8 @@ function updateChart(data) {
                     pointBorderColor: boundaryPointBorders,
                     pointBorderWidth: 1.5,
                     pointRadius: boundaryPointRadii,
-                    pointHoverRadius: 9,
-                    pointStyle: 'triangle',
+                    pointHoverRadius: 8,
+                    pointStyle: boundaryPointStyles,
                 }]
             },
             options: getChartOptions(annotations, isLast)
@@ -868,17 +886,23 @@ function updateChart(data) {
 
         const thresholdPointColors = values.map((_, i) => {
             if (thresholdDetectedIndices.includes(i)) {
-                return thresholdMatchedIndices.has(i) ? '#ec4899' : '#f97316';
+                return thresholdMatchedIndices.has(i) ? '#f87171' : '#f97316';
             }
             return 'transparent';
         });
         const thresholdPointBorders = values.map((_, i) => {
             if (thresholdDetectedIndices.includes(i)) {
-                return thresholdMatchedIndices.has(i) ? '#db2777' : '#ea580c';
+                return thresholdMatchedIndices.has(i) ? '#ef4444' : '#ea580c';
             }
             return 'transparent';
         });
         const thresholdPointRadii = values.map((_, i) => thresholdDetectedIndices.includes(i) ? 6 : 0);
+        const thresholdPointStyles = values.map((_, i) => {
+            if (thresholdDetectedIndices.includes(i)) {
+                return thresholdMatchedIndices.has(i) ? 'circle' : 'triangle';
+            }
+            return 'circle';
+        });
 
         const isLast = enabledMethods[enabledMethods.length - 1] === 'threshold';
         const chart = new Chart(ctx, {
@@ -898,7 +922,7 @@ function updateChart(data) {
                     pointBorderWidth: 1.5,
                     pointRadius: thresholdPointRadii,
                     pointHoverRadius: 8,
-                    pointStyle: 'star',
+                    pointStyle: thresholdPointStyles,
                 }]
             },
             options: getChartOptions(createAnnotations(), isLast)
