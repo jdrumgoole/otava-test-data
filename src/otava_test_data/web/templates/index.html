@@ -124,16 +124,33 @@
                     <div class="panel-header">
                         <label for="run-otava-checkbox" class="panel-title">Otava Analysis</label>
                         <input type="checkbox" id="run-otava-checkbox" checked>
+                        <button class="method-help-btn" data-method="otava" title="Learn about Otava">?</button>
                     </div>
 
                     <div class="panel-fields">
                         <div class="control-group">
-                            <label for="window-len-input">Window Length</label>
+                            <label for="window-len-input" class="param-label">Window Length</label>
                             <input type="number" id="window-len-input" value="30" min="5" max="100" step="5">
                         </div>
                         <div class="control-group">
-                            <label for="max-pvalue-input">Max P-Value</label>
-                            <input type="number" id="max-pvalue-input" value="0.05" min="0.001" max="1.0" step="0.01">
+                            <label for="max-pvalue-input" class="param-label">Max P-Value</label>
+                            <div class="input-with-help">
+                                <input type="number" id="max-pvalue-input" value="0.05" min="0.00001" max="1.0" step="0.001">
+                                <button type="button" class="param-help-btn" data-tooltip="Significance threshold for detecting changes. Lower values mean stricter detection (fewer false positives but may miss subtle changes). 0.05 is standard; use 0.00001 for very high confidence.">?</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Method tutorial (hidden by default) -->
+                    <div class="method-tutorial hidden" id="otava-tutorial">
+                        <p class="method-explanation"></p>
+                        <div class="method-algorithm">
+                            <strong>Algorithm:</strong>
+                            <pre></pre>
+                        </div>
+                        <div class="method-best-for">
+                            <strong>Best For:</strong>
+                            <ul></ul>
                         </div>
                     </div>
                 </div>
@@ -143,15 +160,32 @@
                     <div class="panel-header">
                         <label for="run-ma-checkbox" class="panel-title">Moving Average Analysis</label>
                         <input type="checkbox" id="run-ma-checkbox">
+                        <button class="method-help-btn" data-method="moving_average" title="Learn about Moving Average">?</button>
                     </div>
                     <div class="panel-fields">
                         <div class="control-group">
-                            <label for="ma-window-input">MA Window</label>
+                            <label for="ma-window-input" class="param-label">MA Window</label>
                             <input type="number" id="ma-window-input" value="10" min="3" max="50" step="1">
                         </div>
                         <div class="control-group">
-                            <label for="ma-threshold-input">Threshold (σ)</label>
-                            <input type="number" id="ma-threshold-input" value="2.0" min="0.5" max="5.0" step="0.1">
+                            <label for="ma-threshold-input" class="param-label">Threshold (σ)</label>
+                            <div class="input-with-help">
+                                <input type="number" id="ma-threshold-input" value="2.0" min="0.5" max="5.0" step="0.1">
+                                <button type="button" class="param-help-btn" data-tooltip="How many standard deviations (σ) the mean difference must exceed to trigger detection. Higher values reduce false positives. Typical: 2.0-3.0.">?</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Method tutorial (hidden by default) -->
+                    <div class="method-tutorial hidden" id="ma-tutorial">
+                        <p class="method-explanation"></p>
+                        <div class="method-algorithm">
+                            <strong>Algorithm:</strong>
+                            <pre></pre>
+                        </div>
+                        <div class="method-best-for">
+                            <strong>Best For:</strong>
+                            <ul></ul>
                         </div>
                     </div>
                 </div>
@@ -161,15 +195,29 @@
                     <div class="panel-header">
                         <label for="run-boundary-checkbox" class="panel-title">Boundary Analysis</label>
                         <input type="checkbox" id="run-boundary-checkbox">
+                        <button class="method-help-btn" data-method="boundary" title="Learn about Boundary">?</button>
                     </div>
                     <div class="panel-fields">
                         <div class="control-group">
-                            <label for="boundary-upper-input">Upper Bound</label>
+                            <label for="boundary-upper-input" class="param-label" data-tooltip="Values crossing above this threshold will be flagged. Set based on acceptable maximum for your metric (e.g., max response time SLA).">Upper Bound</label>
                             <input type="number" id="boundary-upper-input" value="115" min="0" max="500" step="5">
                         </div>
                         <div class="control-group">
-                            <label for="boundary-lower-input">Lower Bound</label>
+                            <label for="boundary-lower-input" class="param-label" data-tooltip="Values crossing below this threshold will be flagged. Set based on acceptable minimum (e.g., minimum throughput requirement).">Lower Bound</label>
                             <input type="number" id="boundary-lower-input" value="85" min="0" max="500" step="5">
+                        </div>
+                    </div>
+
+                    <!-- Method tutorial (hidden by default) -->
+                    <div class="method-tutorial hidden" id="boundary-tutorial">
+                        <p class="method-explanation"></p>
+                        <div class="method-algorithm">
+                            <strong>Algorithm:</strong>
+                            <pre></pre>
+                        </div>
+                        <div class="method-best-for">
+                            <strong>Best For:</strong>
+                            <ul></ul>
                         </div>
                     </div>
                 </div>
@@ -178,10 +226,31 @@
 
         <!-- Generator Info -->
         <section class="generator-info" id="generator-info">
-            <h3 id="generator-title">Constant</h3>
-            <p id="generator-description">Constant value: S = x, x, x, x...</p>
-            <div id="change-point-info" class="change-point-badge hidden">
-                <span class="badge">Has Change Points</span>
+            <div class="generator-info-header">
+                <div class="generator-info-main">
+                    <h3 id="generator-title">Constant</h3>
+                    <p id="generator-description">Constant value: S = x, x, x, x...</p>
+                </div>
+                <div id="change-point-info" class="change-point-badge hidden">
+                    <span class="badge">Has Change Points</span>
+                </div>
+                <button id="toggle-tutorial-btn" class="generator-help-btn" title="Learn about this pattern">?</button>
+            </div>
+
+            <!-- Generator Tutorial Panel -->
+            <div id="generator-tutorial-panel" class="tutorial-panel hidden">
+                <div class="tutorial-section">
+                    <h4>Pattern Explanation</h4>
+                    <p id="tutorial-explanation">-</p>
+                </div>
+                <div class="tutorial-section">
+                    <h4>Real-World Use Case</h4>
+                    <p id="tutorial-use-case">-</p>
+                </div>
+                <div class="tutorial-section">
+                    <h4>Detection Notes</h4>
+                    <p id="tutorial-detection-notes">-</p>
+                </div>
             </div>
         </section>
 
@@ -224,7 +293,45 @@
 
         <!-- Accuracy Metrics -->
         <section class="accuracy-metrics" id="accuracy-metrics">
-            <h3>Detection Accuracy</h3>
+            <div class="metrics-header">
+                <h3>Detection Accuracy</h3>
+                <button id="metrics-help-btn" class="metrics-help-btn" title="Learn about detection metrics">?</button>
+            </div>
+
+            <!-- Metrics Tutorial Panel -->
+            <div id="metrics-tutorial-panel" class="metrics-tutorial-panel hidden">
+                <div class="metrics-tutorial-content">
+                    <div class="metrics-tutorial-section">
+                        <h4>Ground Truth</h4>
+                        <p id="metrics-ground-truth">The actual, known change points in the data. Shown as <span class="highlight-green">green dashed lines</span> on the chart.</p>
+                    </div>
+                    <div class="metrics-tutorial-section">
+                        <h4>True Positive (TP)</h4>
+                        <p>A correctly detected change point - the detector found a real change. Shown as <span class="highlight-blue">colored markers</span> matching ground truth.</p>
+                    </div>
+                    <div class="metrics-tutorial-section">
+                        <h4>False Positive (FP)</h4>
+                        <p>A false alarm - the detector reported a change where none exists. Shown as <span class="highlight-red">red/orange/pink markers</span>.</p>
+                    </div>
+                    <div class="metrics-tutorial-section">
+                        <h4>False Negative (FN)</h4>
+                        <p>A missed change - a real change point the detector failed to find. Ground truth lines without matching detection markers.</p>
+                    </div>
+                    <div class="metrics-tutorial-section metrics-formulas">
+                        <h4>How Metrics Are Calculated</h4>
+                        <ul>
+                            <li><strong>Precision</strong> = TP / (TP + FP) - Of detections made, how many were correct?</li>
+                            <li><strong>Recall</strong> = TP / (TP + FN) - Of real changes, how many were found?</li>
+                            <li><strong>F1 Score</strong> = Harmonic mean of Precision and Recall</li>
+                        </ul>
+                    </div>
+                    <div class="metrics-tutorial-section metrics-matching">
+                        <h4>How Matching Works</h4>
+                        <p>A detection is matched to ground truth if it's within <strong>5 indices</strong> (tolerance). This allows for slight positional inaccuracy from windowing algorithms. We know the ground truth because <em>we generate synthetic data</em> - the change points are programmed in. In real-world scenarios, ground truth comes from deployment logs, incident reports, or manual labeling.</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="metrics-grid">
                 <div class="metric-card precision">
                     <h4>Precision</h4>

@@ -76,7 +76,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # Templates
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-# Generator registry with metadata
+# Generator registry with metadata and tutorial content
 GENERATORS = {
     "constant": {
         "func": constant,
@@ -85,7 +85,20 @@ GENERATORS = {
         "category": "basic",
         "has_change_points": False,
         "params": {
-            "value": {"type": "float", "default": 100.0, "min": 0, "max": 1000, "step": 1},
+            "value": {
+                "type": "float", "default": 100.0, "min": 0, "max": 1000, "step": 1,
+                "tooltip": "The constant value for all data points",
+            },
+        },
+        "tutorial": {
+            "explanation": "Generates a perfectly stable time series where every data point "
+                          "has the same value. This represents an idealized system with no "
+                          "variation whatsoever.",
+            "use_case": "Simulates a perfectly stable system with no changes. Useful as a "
+                       "baseline to verify that change point detectors produce zero false "
+                       "positives when given data with no actual changes.",
+            "detection_notes": "A good detector should produce exactly zero detections on this "
+                              "pattern. Any detection would be a false positive.",
         },
     },
     "noise_normal": {
@@ -95,8 +108,25 @@ GENERATORS = {
         "category": "basic",
         "has_change_points": False,
         "params": {
-            "mean": {"type": "float", "default": 100.0, "min": 0, "max": 1000, "step": 1},
-            "sigma": {"type": "float", "default": 5.0, "min": 0.1, "max": 50, "step": 0.5},
+            "mean": {
+                "type": "float", "default": 100.0, "min": 0, "max": 1000, "step": 1,
+                "tooltip": "The center (expected value) of the normal distribution",
+            },
+            "sigma": {
+                "type": "float", "default": 5.0, "min": 0.1, "max": 50, "step": 0.5,
+                "tooltip": "Standard deviation - controls the spread of values around the mean",
+            },
+        },
+        "tutorial": {
+            "explanation": "Generates data points drawn from a Gaussian (normal) distribution. "
+                          "Values cluster around the mean with the characteristic bell curve shape. "
+                          "About 68% of values fall within one sigma of the mean.",
+            "use_case": "Represents typical performance metrics with random variation, like "
+                       "response times, CPU usage, or throughput measurements. This is the most "
+                       "common noise model in real systems.",
+            "detection_notes": "Detectors should not flag normal statistical variation as changes. "
+                              "Occasional outliers (values beyond 2-3 sigma) are expected and "
+                              "should not trigger false positives.",
         },
     },
     "noise_uniform": {
@@ -106,8 +136,25 @@ GENERATORS = {
         "category": "basic",
         "has_change_points": False,
         "params": {
-            "min_val": {"type": "float", "default": 90.0, "min": 0, "max": 500, "step": 1},
-            "max_val": {"type": "float", "default": 110.0, "min": 0, "max": 500, "step": 1},
+            "min_val": {
+                "type": "float", "default": 90.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "Lower bound - no values will be below this",
+            },
+            "max_val": {
+                "type": "float", "default": 110.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "Upper bound - no values will be above this",
+            },
+        },
+        "tutorial": {
+            "explanation": "Generates data points uniformly distributed between min and max values. "
+                          "Every value in the range is equally likely. Unlike normal distribution, "
+                          "there's no clustering around a central value.",
+            "use_case": "Simulates systems with bounded random behavior, such as random delays "
+                       "within a fixed range, or load balancing across a fixed number of servers. "
+                       "Tests robustness to non-Gaussian distributions.",
+            "detection_notes": "Similar to normal noise, detectors should not flag this as containing "
+                              "changes. The uniform distribution tests whether algorithms assume "
+                              "Gaussian noise incorrectly.",
         },
     },
     "outlier": {
@@ -117,9 +164,29 @@ GENERATORS = {
         "category": "basic",
         "has_change_points": False,
         "params": {
-            "baseline": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
-            "outlier_value": {"type": "float", "default": 150.0, "min": 0, "max": 500, "step": 1},
-            "sigma": {"type": "float", "default": 5.0, "min": 0, "max": 20, "step": 0.5},
+            "baseline": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The normal value for most data points",
+            },
+            "outlier_value": {
+                "type": "float", "default": 150.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The anomalous value at the outlier point",
+            },
+            "sigma": {
+                "type": "float", "default": 5.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Random noise added to all points (including the outlier)",
+            },
+        },
+        "tutorial": {
+            "explanation": "Generates stable data with a single anomalous spike or dip at the "
+                          "midpoint. The outlier represents a one-time glitch rather than a "
+                          "persistent change in system behavior.",
+            "use_case": "Simulates one-off events like a network hiccup, garbage collection pause, "
+                       "or momentary resource contention. These are transient anomalies, not "
+                       "persistent changes.",
+            "detection_notes": "This is NOT a change point - it's an anomaly. Change point detectors "
+                              "may or may not flag it, but it tests whether algorithms distinguish "
+                              "between transient spikes and persistent shifts.",
         },
     },
     "step_function": {
@@ -129,9 +196,29 @@ GENERATORS = {
         "category": "basic",
         "has_change_points": True,
         "params": {
-            "value_before": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
-            "value_after": {"type": "float", "default": 120.0, "min": 0, "max": 500, "step": 1},
-            "sigma": {"type": "float", "default": 5.0, "min": 0, "max": 20, "step": 0.5},
+            "value_before": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The baseline value before the change occurs",
+            },
+            "value_after": {
+                "type": "float", "default": 120.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The new value after the change point",
+            },
+            "sigma": {
+                "type": "float", "default": 5.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Random noise added to obscure the exact change point",
+            },
+        },
+        "tutorial": {
+            "explanation": "The fundamental change point pattern. Data maintains one value, then "
+                          "abruptly shifts to a different value at the midpoint and stays there. "
+                          "This is the 'textbook' change point that all detectors should find.",
+            "use_case": "Represents a performance regression or improvement that persists: a code "
+                       "deployment that changes response times, a configuration change affecting "
+                       "throughput, or a hardware upgrade improving capacity.",
+            "detection_notes": "This is the PRIMARY test case for change point detection. A reliable "
+                              "detector must find this change point accurately. The noise level (sigma) "
+                              "controls detection difficulty.",
         },
     },
     "regression_fix": {
@@ -141,10 +228,33 @@ GENERATORS = {
         "category": "basic",
         "has_change_points": True,
         "params": {
-            "value_normal": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
-            "value_regression": {"type": "float", "default": 130.0, "min": 0, "max": 500, "step": 1},
-            "regression_duration": {"type": "int", "default": 20, "min": 2, "max": 100, "step": 1},
-            "sigma": {"type": "float", "default": 5.0, "min": 0, "max": 20, "step": 0.5},
+            "value_normal": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The normal system value (before and after the regression)",
+            },
+            "value_regression": {
+                "type": "float", "default": 130.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The degraded value during the regression period",
+            },
+            "regression_duration": {
+                "type": "int", "default": 20, "min": 2, "max": 100, "step": 1,
+                "tooltip": "How many data points the regression lasts",
+            },
+            "sigma": {
+                "type": "float", "default": 5.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Random noise added throughout the series",
+            },
+        },
+        "tutorial": {
+            "explanation": "Models a temporary degradation: normal operation, followed by a period "
+                          "of worse performance, then returning to normal. Contains TWO change points: "
+                          "the start of the regression and the fix.",
+            "use_case": "Simulates a bug introduced in one release and fixed in a subsequent release, "
+                       "a temporary resource constraint, or an incident that was later resolved. "
+                       "Common in continuous deployment environments.",
+            "detection_notes": "Detectors should identify BOTH change points: when the regression "
+                              "starts and when it's fixed. This tests the ability to detect changes "
+                              "in both directions.",
         },
     },
     "banding": {
@@ -154,9 +264,29 @@ GENERATORS = {
         "category": "advanced",
         "has_change_points": False,
         "params": {
-            "value1": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
-            "value2": {"type": "float", "default": 105.0, "min": 0, "max": 500, "step": 1},
-            "sigma": {"type": "float", "default": 2.0, "min": 0, "max": 20, "step": 0.5},
+            "value1": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "First band value (alternates with value2)",
+            },
+            "value2": {
+                "type": "float", "default": 105.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "Second band value (alternates with value1)",
+            },
+            "sigma": {
+                "type": "float", "default": 2.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Random noise added to each band",
+            },
+        },
+        "tutorial": {
+            "explanation": "Creates a bimodal pattern where data alternates between two distinct "
+                          "values. Each point randomly picks one of the two bands, creating a "
+                          "characteristic two-stripe visual pattern.",
+            "use_case": "Simulates systems that intentionally alternate between states: A/B testing "
+                       "with different performance characteristics, load balancing between fast and "
+                       "slow servers, or caching with distinct hit/miss response times.",
+            "detection_notes": "These alternations are INTENTIONAL behavior, not changes. A good "
+                              "detector should NOT flag the band transitions as change points, as "
+                              "this is the system's normal operating pattern.",
         },
     },
     "variance_change": {
@@ -166,9 +296,29 @@ GENERATORS = {
         "category": "advanced",
         "has_change_points": True,
         "params": {
-            "mean": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
-            "sigma_before": {"type": "float", "default": 2.0, "min": 0.1, "max": 30, "step": 0.5},
-            "sigma_after": {"type": "float", "default": 10.0, "min": 0.1, "max": 30, "step": 0.5},
+            "mean": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The average value (stays constant throughout)",
+            },
+            "sigma_before": {
+                "type": "float", "default": 2.0, "min": 0.1, "max": 30, "step": 0.5,
+                "tooltip": "Standard deviation before the change (lower = more stable)",
+            },
+            "sigma_after": {
+                "type": "float", "default": 10.0, "min": 0.1, "max": 30, "step": 0.5,
+                "tooltip": "Standard deviation after the change (higher = more volatile)",
+            },
+        },
+        "tutorial": {
+            "explanation": "The mean stays exactly the same, but the spread (variance) changes. "
+                          "Data becomes more volatile (or more stable) at the change point. "
+                          "This is a subtler change than a mean shift.",
+            "use_case": "Represents a system becoming less reliable without changing average "
+                       "performance: response times stay the same on average but become "
+                       "unpredictable, or a stabilization effort that reduces jitter.",
+            "detection_notes": "Tests detection of variance changes, which are harder to spot than "
+                              "mean shifts. Some detectors only look for mean changes and will miss "
+                              "this. Statistical tests like F-test or Levene's test are needed.",
         },
     },
     "phase_change": {
@@ -178,10 +328,33 @@ GENERATORS = {
         "category": "advanced",
         "has_change_points": True,
         "params": {
-            "amplitude": {"type": "float", "default": 10.0, "min": 1, "max": 50, "step": 1},
-            "baseline": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
-            "period": {"type": "int", "default": 20, "min": 5, "max": 100, "step": 1},
-            "sigma": {"type": "float", "default": 2.0, "min": 0, "max": 20, "step": 0.5},
+            "amplitude": {
+                "type": "float", "default": 10.0, "min": 1, "max": 50, "step": 1,
+                "tooltip": "Height of the oscillation (peak to baseline)",
+            },
+            "baseline": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "Center value around which the wave oscillates",
+            },
+            "period": {
+                "type": "int", "default": 20, "min": 5, "max": 100, "step": 1,
+                "tooltip": "How many points for one complete cycle",
+            },
+            "sigma": {
+                "type": "float", "default": 2.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Random noise added to the wave",
+            },
+        },
+        "tutorial": {
+            "explanation": "Generates a periodic (wave-like) signal that changes phase at the "
+                          "midpoint. Before: cosine wave (starts at peak). After: sine wave "
+                          "(starts at zero). Mean and variance remain the same.",
+            "use_case": "Rare in performance data, but tests edge cases. Could represent timing "
+                       "or synchronization changes, clock drift corrections, or periodic process "
+                       "scheduling changes.",
+            "detection_notes": "Extremely difficult to detect with standard methods since mean and "
+                              "variance don't change. Requires frequency-domain analysis or "
+                              "specialized phase detection. Most detectors will miss this.",
         },
     },
     "multiple_changes": {
@@ -191,7 +364,21 @@ GENERATORS = {
         "category": "advanced",
         "has_change_points": True,
         "params": {
-            "sigma": {"type": "float", "default": 5.0, "min": 0, "max": 20, "step": 0.5},
+            "sigma": {
+                "type": "float", "default": 5.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Random noise added to all segments",
+            },
+        },
+        "tutorial": {
+            "explanation": "Contains multiple step changes at different points in the series. "
+                          "The data transitions through several distinct levels, with each "
+                          "transition being a separate change point to detect.",
+            "use_case": "Represents gradual improvements or degradations over time: multiple "
+                       "optimization efforts, cascading failures, or phased rollouts where each "
+                       "phase affects performance differently.",
+            "detection_notes": "Detectors should find ALL transition points, not just the first one. "
+                              "Tests the ability to detect multiple changes and avoid 'masking' "
+                              "where detecting one change prevents detecting others.",
         },
     },
     "multiple_outliers": {
@@ -201,10 +388,33 @@ GENERATORS = {
         "category": "advanced",
         "has_change_points": False,
         "params": {
-            "baseline": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
-            "outlier_value": {"type": "float", "default": 150.0, "min": 0, "max": 500, "step": 1},
-            "n_outliers": {"type": "int", "default": 5, "min": 2, "max": 20, "step": 1},
-            "sigma": {"type": "float", "default": 5.0, "min": 0, "max": 20, "step": 0.5},
+            "baseline": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The normal value for most data points",
+            },
+            "outlier_value": {
+                "type": "float", "default": 150.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The value at anomalous points",
+            },
+            "n_outliers": {
+                "type": "int", "default": 5, "min": 2, "max": 20, "step": 1,
+                "tooltip": "Number of outlier points to generate",
+            },
+            "sigma": {
+                "type": "float", "default": 5.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Random noise added to all points",
+            },
+        },
+        "tutorial": {
+            "explanation": "Generates stable data with several random spikes scattered throughout. "
+                          "Each outlier is independent and the system returns to baseline immediately. "
+                          "No persistent change in behavior occurs.",
+            "use_case": "Simulates intermittent issues: occasional garbage collection pauses, "
+                       "sporadic network timeouts, or random resource contention. These are "
+                       "noise, not changes.",
+            "detection_notes": "Like single outliers, these are NOT change points. Tests whether "
+                              "detectors can distinguish between multiple anomalies and actual "
+                              "regime changes. Should not trigger false positives.",
         },
     },
     "multiple_variance_changes": {
@@ -214,7 +424,21 @@ GENERATORS = {
         "category": "advanced",
         "has_change_points": True,
         "params": {
-            "mean": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
+            "mean": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The average value (stays constant throughout)",
+            },
+        },
+        "tutorial": {
+            "explanation": "The mean stays constant while variance changes multiple times. "
+                          "Data alternates between stable and volatile periods, creating "
+                          "multiple variance change points to detect.",
+            "use_case": "Represents a system that goes through phases of stability and instability: "
+                       "periodic maintenance windows, varying load conditions, or intermittent "
+                       "environmental factors affecting reliability.",
+            "detection_notes": "Combines the difficulty of variance detection with multiple change "
+                              "points. Tests advanced detection capabilities. Many simple detectors "
+                              "will fail on this pattern.",
         },
     },
     # Clean patterns (no noise) for visualization
@@ -225,9 +449,29 @@ GENERATORS = {
         "category": "clean",
         "has_change_points": True,
         "params": {
-            "value_before": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
-            "value_after": {"type": "float", "default": 120.0, "min": 0, "max": 500, "step": 1},
-            "sigma": {"type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5},
+            "value_before": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The baseline value before the change occurs",
+            },
+            "value_after": {
+                "type": "float", "default": 120.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The new value after the change point",
+            },
+            "sigma": {
+                "type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Set to 0 for perfectly clean signal (increase to add noise)",
+            },
+        },
+        "tutorial": {
+            "explanation": "A perfect step function with no random noise. The change point is "
+                          "exactly visible as an instant jump from one value to another. "
+                          "Useful for understanding the basic pattern before adding noise.",
+            "use_case": "Educational visualization of what a step change looks like in ideal "
+                       "conditions. Also useful for testing detector behavior on trivially "
+                       "easy cases.",
+            "detection_notes": "Any detector should trivially find this change point. If a detector "
+                              "fails on clean data, it has fundamental issues. Use this to verify "
+                              "basic functionality.",
         },
     },
     "multiple_changes_clean": {
@@ -237,7 +481,20 @@ GENERATORS = {
         "category": "clean",
         "has_change_points": True,
         "params": {
-            "sigma": {"type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5},
+            "sigma": {
+                "type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Set to 0 for perfectly clean signal (increase to add noise)",
+            },
+        },
+        "tutorial": {
+            "explanation": "Multiple step changes with no noise, showing each level transition "
+                          "as a perfectly sharp boundary. The staircase pattern is immediately "
+                          "visible.",
+            "use_case": "Educational visualization of multiple change points. Helps understand "
+                       "what detectors are looking for before noise obscures the pattern.",
+            "detection_notes": "All change points should be trivially detectable. Use this to "
+                              "verify that a detector can find multiple changes without being "
+                              "confused by the easy case.",
         },
     },
     "regression_fix_clean": {
@@ -247,10 +504,31 @@ GENERATORS = {
         "category": "clean",
         "has_change_points": True,
         "params": {
-            "value_normal": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
-            "value_regression": {"type": "float", "default": 130.0, "min": 0, "max": 500, "step": 1},
-            "regression_duration": {"type": "int", "default": 20, "min": 2, "max": 100, "step": 1},
-            "sigma": {"type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5},
+            "value_normal": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The normal system value (before and after the regression)",
+            },
+            "value_regression": {
+                "type": "float", "default": 130.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The degraded value during the regression period",
+            },
+            "regression_duration": {
+                "type": "int", "default": 20, "min": 2, "max": 100, "step": 1,
+                "tooltip": "How many data points the regression lasts",
+            },
+            "sigma": {
+                "type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Set to 0 for perfectly clean signal (increase to add noise)",
+            },
+        },
+        "tutorial": {
+            "explanation": "A clean visualization of a temporary regression pattern. Shows the "
+                          "three distinct levels (normal, regression, normal) without any noise "
+                          "obscuring the transitions.",
+            "use_case": "Educational tool for understanding the regression-fix pattern. Both "
+                       "change points (regression start and fix) are perfectly visible.",
+            "detection_notes": "Both change points should be trivially detectable. Verify that "
+                              "your detector finds exactly two change points at the correct locations.",
         },
     },
     "banding_clean": {
@@ -260,9 +538,28 @@ GENERATORS = {
         "category": "clean",
         "has_change_points": False,
         "params": {
-            "value1": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
-            "value2": {"type": "float", "default": 110.0, "min": 0, "max": 500, "step": 1},
-            "sigma": {"type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5},
+            "value1": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "First band value",
+            },
+            "value2": {
+                "type": "float", "default": 110.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "Second band value",
+            },
+            "sigma": {
+                "type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Set to 0 for perfectly clean bands (increase to add noise)",
+            },
+        },
+        "tutorial": {
+            "explanation": "Clean bimodal pattern showing exactly two discrete values. Each "
+                          "point is exactly at value1 or value2 with no noise, making the "
+                          "banding pattern maximally clear.",
+            "use_case": "Educational visualization of what banding looks like. Helps understand "
+                       "why this pattern should NOT trigger change point detection.",
+            "detection_notes": "Even with no noise, this is NOT a change point pattern. The "
+                              "alternation is intentional system behavior. Zero detections "
+                              "is the correct result.",
         },
     },
     "outlier_clean": {
@@ -272,9 +569,276 @@ GENERATORS = {
         "category": "clean",
         "has_change_points": False,
         "params": {
-            "baseline": {"type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1},
-            "outlier_value": {"type": "float", "default": 150.0, "min": 0, "max": 500, "step": 1},
-            "sigma": {"type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5},
+            "baseline": {
+                "type": "float", "default": 100.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The normal value for most data points",
+            },
+            "outlier_value": {
+                "type": "float", "default": 150.0, "min": 0, "max": 500, "step": 1,
+                "tooltip": "The anomalous value at the outlier point",
+            },
+            "sigma": {
+                "type": "float", "default": 0.0, "min": 0, "max": 20, "step": 0.5,
+                "tooltip": "Set to 0 for perfectly clean signal (increase to add noise)",
+            },
+        },
+        "tutorial": {
+            "explanation": "A perfectly clean baseline with a single visible spike. The outlier "
+                          "is maximally obvious against the flat baseline, making it easy to "
+                          "see the difference between an outlier and a change point.",
+            "use_case": "Educational visualization contrasting outliers with change points. "
+                       "The single spike clearly returns to baseline, demonstrating that "
+                       "this is not a persistent change.",
+            "detection_notes": "This is an OUTLIER, not a change point. Some detectors may flag "
+                              "it, but the behavior is transient. Compare with step_function_clean "
+                              "to see the difference.",
+        },
+    },
+}
+
+# Analysis method explanations for tutorial
+ANALYSIS_METHODS = {
+    "otava": {
+        "id": "otava",
+        "name": "Otava Statistical Analysis",
+        "short_desc": "Statistical hypothesis testing for change detection",
+        "explanation": "Apache Otava uses statistical hypothesis testing to detect change points. "
+                      "It slides a window across the data and compares the distributions of values "
+                      "before and after each potential change point using statistical tests.",
+        "algorithm": (
+            "1. Slide a window of length W across the time series\n"
+            "2. At each position, split data into 'before' and 'after' segments\n"
+            "3. Apply statistical tests (t-test, Kolmogorov-Smirnov) to compare distributions\n"
+            "4. Calculate p-value for the null hypothesis (no change)\n"
+            "5. If p-value < threshold, flag as potential change point\n"
+            "6. Apply filtering to remove redundant detections"
+        ),
+        "best_for": [
+            "Mean shifts (step functions)",
+            "Variance changes",
+            "Distribution changes",
+            "Statistically rigorous detection",
+        ],
+        "limitations": [
+            "Requires sufficient data on both sides of change point",
+            "Window size affects sensitivity vs. precision tradeoff",
+            "May miss very gradual changes",
+        ],
+        "parameters": {
+            "window_len": {
+                "name": "Window Length",
+                "tooltip": "Minimum number of points on each side of a potential change point. "
+                          "Larger windows give more statistical power but may miss changes near "
+                          "the edges. Typical range: 10-50.",
+            },
+            "max_pvalue": {
+                "name": "Max P-Value",
+                "tooltip": "Significance threshold for detecting changes. Lower values mean "
+                          "stricter detection (fewer false positives but may miss subtle changes). "
+                          "0.05 is standard; use 0.01 for high confidence.",
+            },
+        },
+    },
+    "moving_average": {
+        "id": "moving_average",
+        "name": "Moving Average Analysis",
+        "short_desc": "Rolling window mean comparison",
+        "explanation": "Computes the rolling average over a sliding window and compares the mean "
+                      "values before and after each point. A change is detected when the difference "
+                      "between adjacent windows exceeds a threshold based on local standard deviation.",
+        "algorithm": (
+            "1. For each point i, compute mean of window before (W points)\n"
+            "2. Compute mean of window after (W points)\n"
+            "3. Calculate local standard deviation for both windows\n"
+            "4. If |mean_after - mean_before| > threshold * local_std, flag as change\n"
+            "5. Select local maxima to avoid detecting the same change multiple times"
+        ),
+        "best_for": [
+            "Quick detection of sudden changes",
+            "Noisy data where statistical tests may be unstable",
+            "Real-time monitoring scenarios",
+            "Simple, interpretable results",
+        ],
+        "limitations": [
+            "Less statistically rigorous than hypothesis testing",
+            "Threshold selection is somewhat arbitrary",
+            "May be sensitive to outliers",
+        ],
+        "parameters": {
+            "ma_window": {
+                "name": "MA Window",
+                "tooltip": "Size of the rolling window for computing averages. Larger windows "
+                          "smooth out noise but may delay detection. Typical range: 5-20.",
+            },
+            "ma_threshold": {
+                "name": "Threshold (sigma)",
+                "tooltip": "How many standard deviations the mean difference must exceed to "
+                          "trigger detection. Higher values reduce false positives. Typical: 2.0-3.0.",
+            },
+        },
+    },
+    "boundary": {
+        "id": "boundary",
+        "name": "Boundary Analysis",
+        "short_desc": "Threshold violation detection",
+        "explanation": "Simple threshold-based detection that flags points where values cross "
+                      "predefined upper or lower boundaries. Each boundary crossing is detected "
+                      "only once (not every point outside the bounds).",
+        "algorithm": (
+            "1. Define upper and lower threshold values\n"
+            "2. Scan through data points sequentially\n"
+            "3. When a value crosses above the upper bound (and wasn't already above), flag it\n"
+            "4. When a value crosses below the lower bound (and wasn't already below), flag it\n"
+            "5. Return all boundary crossing points"
+        ),
+        "best_for": [
+            "SLA monitoring (response time limits)",
+            "Known acceptable performance ranges",
+            "Simple alerting systems",
+            "When domain knowledge defines clear thresholds",
+        ],
+        "limitations": [
+            "Requires knowing appropriate thresholds in advance",
+            "Cannot detect changes within acceptable bounds",
+            "Not adaptive to changing baseline",
+            "Binary (in/out of bounds) rather than measuring change magnitude",
+        ],
+        "parameters": {
+            "upper_bound": {
+                "name": "Upper Bound",
+                "tooltip": "Values crossing above this threshold will be flagged. Set based on "
+                          "acceptable maximum for your metric (e.g., max response time SLA).",
+            },
+            "lower_bound": {
+                "name": "Lower Bound",
+                "tooltip": "Values crossing below this threshold will be flagged. Set based on "
+                          "acceptable minimum (e.g., minimum throughput requirement).",
+            },
+        },
+    },
+}
+
+# Detection metrics tutorial content
+DETECTION_METRICS_TUTORIAL = {
+    "overview": {
+        "title": "Understanding Detection Metrics",
+        "explanation": (
+            "Change point detection is evaluated by comparing what the algorithm detected "
+            "against what we know to be true (ground truth). This comparison produces metrics "
+            "that tell us how well the detector is performing."
+        ),
+    },
+    "ground_truth": {
+        "title": "Ground Truth",
+        "explanation": (
+            "Ground truth refers to the actual, known change points in the data. In this "
+            "visualizer, we generate synthetic data where we know exactly where the changes "
+            "occur because we programmed them in. For example, in a step function, the ground "
+            "truth is the exact index where the value jumps from 100 to 120."
+        ),
+        "real_world": (
+            "In real-world scenarios, ground truth might come from: deployment logs (we know "
+            "a release happened at time X), incident reports, or manual labeling by experts. "
+            "Having accurate ground truth is essential for evaluating detector performance."
+        ),
+        "visual": "Shown as green dashed vertical lines on the chart.",
+    },
+    "true_positive": {
+        "title": "True Positive (TP)",
+        "explanation": (
+            "A true positive occurs when the detector correctly identifies an actual change "
+            "point. The detected point matches (within tolerance) a ground truth change point. "
+            "This is what we want - the detector found a real change."
+        ),
+        "example": (
+            "Ground truth has a change at index 100. The detector reports a change at index 102. "
+            "With a tolerance of 5, this counts as a true positive because |102-100| <= 5."
+        ),
+        "visual": "Shown as blue diamonds (Otava), purple circles (MA), or cyan triangles (Boundary).",
+    },
+    "false_positive": {
+        "title": "False Positive (FP)",
+        "explanation": (
+            "A false positive occurs when the detector reports a change point where none "
+            "actually exists. This is a 'false alarm' - the detector thought something changed "
+            "but it was just noise or normal variation."
+        ),
+        "example": (
+            "The detector reports a change at index 150, but no ground truth change point is "
+            "within tolerance of that location. This detection is incorrect."
+        ),
+        "visual": "Shown as red diamonds (Otava), orange circles (MA), or pink triangles (Boundary).",
+        "causes": [
+            "Noise in the data being mistaken for a change",
+            "Threshold set too sensitive",
+            "Window size too small",
+            "Outliers being flagged as changes",
+        ],
+    },
+    "false_negative": {
+        "title": "False Negative (FN)",
+        "explanation": (
+            "A false negative occurs when the detector fails to find an actual change point. "
+            "A real change exists in the ground truth, but the detector missed it. This is a "
+            "'miss' - a real change went undetected."
+        ),
+        "example": (
+            "Ground truth has a change at index 100, but the detector reports no changes nearby. "
+            "The change was missed."
+        ),
+        "causes": [
+            "Noise obscuring the change signal",
+            "Threshold set too strict",
+            "Window size too large (smoothing out the change)",
+            "Change magnitude too small relative to noise",
+        ],
+    },
+    "how_matching_works": {
+        "title": "How Detection Matching Works",
+        "explanation": (
+            "To determine if a detection is a true positive or false positive, we use a "
+            "tolerance-based matching algorithm:"
+        ),
+        "algorithm": (
+            "1. For each detected change point, check if any ground truth point is within "
+            "the tolerance distance\n"
+            "2. If yes, it's a True Positive (and that ground truth point is marked as matched)\n"
+            "3. If no ground truth point is nearby, it's a False Positive\n"
+            "4. Any ground truth points not matched to any detection are False Negatives"
+        ),
+        "tolerance_note": (
+            "The tolerance (default: 5 indices) allows for slight positional inaccuracy. "
+            "Detectors often report changes slightly before or after the exact point due to "
+            "the windowing algorithms they use."
+        ),
+    },
+    "metrics": {
+        "precision": {
+            "title": "Precision",
+            "formula": "Precision = TP / (TP + FP)",
+            "explanation": (
+                "Of all the changes the detector reported, what fraction were actually real? "
+                "High precision means few false alarms. A precision of 100% means every "
+                "detection was correct (but you might have missed some)."
+            ),
+        },
+        "recall": {
+            "title": "Recall",
+            "formula": "Recall = TP / (TP + FN)",
+            "explanation": (
+                "Of all the real changes that exist, what fraction did the detector find? "
+                "High recall means few missed changes. A recall of 100% means every real "
+                "change was detected (but you might have false alarms too)."
+            ),
+        },
+        "f1_score": {
+            "title": "F1 Score",
+            "formula": "F1 = 2 × (Precision × Recall) / (Precision + Recall)",
+            "explanation": (
+                "The harmonic mean of precision and recall, providing a single score that "
+                "balances both concerns. An F1 of 100% means perfect precision AND perfect "
+                "recall. It's the best single number for overall detector quality."
+            ),
         },
     },
 }
@@ -520,7 +1084,7 @@ async def index(request: Request):
 
 @app.get("/api/generators")
 async def list_generators():
-    """List all available generators with metadata."""
+    """List all available generators with metadata and tutorial content."""
     return {
         name: {
             "name": info["name"],
@@ -528,9 +1092,22 @@ async def list_generators():
             "category": info["category"],
             "has_change_points": info["has_change_points"],
             "params": info["params"],
+            "tutorial": info.get("tutorial"),
         }
         for name, info in GENERATORS.items()
     }
+
+
+@app.get("/api/methods")
+async def list_methods():
+    """List all available analysis methods with explanations."""
+    return ANALYSIS_METHODS
+
+
+@app.get("/api/metrics-tutorial")
+async def get_metrics_tutorial():
+    """Get tutorial content explaining detection metrics."""
+    return DETECTION_METRICS_TUTORIAL
 
 
 @app.get("/api/generate/{generator_name}")
@@ -540,7 +1117,7 @@ async def generate_data(
     seed: int = Query(default=42),
     run_otava: bool = Query(default=False, description="Run Otava analysis"),
     window_len: int = Query(default=30, ge=5, le=100, description="Otava window length"),
-    max_pvalue: float = Query(default=0.05, ge=0.001, le=1.0, description="Otava max p-value"),
+    max_pvalue: float = Query(default=0.05, ge=0.00001, le=1.0, description="Otava max p-value"),
     tolerance: int = Query(default=5, ge=0, le=50, description="Accuracy tolerance"),
     # Dynamic params will be passed as query parameters
     request: Request = None,
@@ -593,7 +1170,7 @@ async def analyze_with_otava(
     length: int = Query(default=200, ge=10, le=2000),
     seed: int = Query(default=42),
     window_len: int = Query(default=30, ge=5, le=100, description="Otava window length"),
-    max_pvalue: float = Query(default=0.05, ge=0.001, le=1.0, description="Otava max p-value"),
+    max_pvalue: float = Query(default=0.05, ge=0.00001, le=1.0, description="Otava max p-value"),
     min_magnitude: float = Query(default=0.0, ge=0, description="Minimum change magnitude"),
     tolerance: int = Query(default=5, ge=0, le=50, description="Accuracy tolerance"),
     request: Request = None,

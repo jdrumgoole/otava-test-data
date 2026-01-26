@@ -34,9 +34,26 @@ body {
 }
 
 header {
-    background: linear-gradient(135deg, var(--primary-color), #1e40af);
+    background: url('/static/images/meteor.webp') center 65% / cover no-repeat;
     color: white;
-    padding: 0.75rem 1rem;
+    padding: 1.5rem 1rem;
+    position: relative;
+}
+
+header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 0;
+}
+
+header > * {
+    position: relative;
+    z-index: 1;
 }
 
 .header-content {
@@ -220,6 +237,10 @@ main {
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+input[type="number"] {
+    text-align: right;
+}
+
 .control-group select:focus,
 .control-group input:focus {
     outline: none;
@@ -389,6 +410,12 @@ main {
     color: var(--text-secondary);
 }
 
+.param-group .label-with-help {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
 .param-group input {
     padding: 0.5rem;
     border: 1px solid var(--border-color);
@@ -444,6 +471,18 @@ main {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.generator-info-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.generator-info-main {
+    flex: 1;
+    min-width: 200px;
+}
+
 .generator-info h3 {
     font-size: 1rem;
     margin-bottom: 0.15rem;
@@ -455,7 +494,7 @@ main {
 }
 
 .change-point-badge {
-    margin-top: 0.25rem;
+    margin: 0;
 }
 
 .badge {
@@ -466,6 +505,266 @@ main {
     border-radius: 20px;
     font-size: 0.8rem;
     font-weight: 600;
+}
+
+/* Generator Help Button (? icon) */
+.generator-help-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.generator-help-btn:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.generator-help-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* Generator Tutorial Panel */
+.tutorial-panel {
+    margin-top: 0.75rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border-radius: 8px;
+    border-left: 3px solid var(--primary-color);
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tutorial-section {
+    margin-bottom: 0.75rem;
+}
+
+.tutorial-section:last-child {
+    margin-bottom: 0;
+}
+
+.tutorial-section h4 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.tutorial-section p {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* Method Help Button */
+.method-help-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+}
+
+.method-help-btn:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.method-help-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* Method Tutorial Panel */
+.method-tutorial {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 6px;
+    border-top: 1px solid var(--border-color);
+    animation: slideDown 0.2s ease-out;
+}
+
+.method-tutorial .method-explanation {
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin-bottom: 0.5rem;
+}
+
+.method-tutorial .method-algorithm {
+    margin-bottom: 0.5rem;
+}
+
+.method-tutorial .method-algorithm strong,
+.method-tutorial .method-best-for strong {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.method-tutorial .method-algorithm pre {
+    font-size: 0.75rem;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    background: var(--background);
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-top: 0.25rem;
+    white-space: pre-wrap;
+    line-height: 1.4;
+    color: var(--text-primary);
+}
+
+.method-tutorial .method-best-for ul {
+    margin: 0.25rem 0 0 1rem;
+    padding: 0;
+    font-size: 0.8rem;
+}
+
+.method-tutorial .method-best-for li {
+    margin-bottom: 0.15rem;
+    color: var(--text-primary);
+}
+
+/* Parameter Label with Help Button */
+.label-with-help {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.param-help-btn {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.6rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.param-help-btn:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* Parameter Label Tooltip */
+.param-label[data-tooltip] {
+    cursor: help;
+    border-bottom: 1px dotted var(--text-secondary);
+}
+
+.param-tooltip {
+    position: fixed;
+    z-index: 1001;
+    background: var(--text-primary);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    max-width: 280px;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.param-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 15px;
+    border-width: 0 6px 6px 6px;
+    border-style: solid;
+    border-color: transparent transparent var(--text-primary) transparent;
+}
+
+/* Popup tooltip for param help buttons */
+.param-tooltip-popup {
+    position: fixed;
+    z-index: 1001;
+    background: var(--text-primary);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    max-width: 280px;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.15s ease-out;
+}
+
+.param-help-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* Input with Help Button Container */
+.input-with-help {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.input-with-help input {
+    flex: 1;
 }
 
 .hidden {
@@ -725,6 +1024,11 @@ footer a:hover {
     font-size: 0.85rem;
 }
 
+/* Wider input for p-value to accommodate small values like 0.00001 */
+#max-pvalue-input {
+    width: 90px;
+}
+
 /* Otava Controls Section */
 .otava-controls {
     border-left: 3px solid var(--primary-color);
@@ -882,9 +1186,110 @@ footer a:hover {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.accuracy-metrics h3 {
+.metrics-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     margin-bottom: 0.3rem;
+}
+
+.metrics-header h3 {
+    margin: 0;
     font-size: 0.85rem;
+}
+
+.metrics-help-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.metrics-help-btn:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.metrics-help-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* Metrics Tutorial Panel */
+.metrics-tutorial-panel {
+    margin-bottom: 0.5rem;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-radius: 6px;
+    border-left: 3px solid #f59e0b;
+    animation: slideDown 0.2s ease-out;
+}
+
+.metrics-tutorial-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+
+.metrics-tutorial-section {
+    background: rgba(255, 255, 255, 0.7);
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.metrics-tutorial-section h4 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #92400e;
+    margin-bottom: 0.25rem;
+}
+
+.metrics-tutorial-section p,
+.metrics-tutorial-section li {
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    line-height: 1.4;
+    margin: 0;
+}
+
+.metrics-tutorial-section ul {
+    margin: 0.25rem 0 0 1rem;
+    padding: 0;
+}
+
+.metrics-tutorial-section li {
+    margin-bottom: 0.2rem;
+}
+
+.metrics-tutorial-section.metrics-formulas,
+.metrics-tutorial-section.metrics-matching {
+    grid-column: 1 / -1;
+}
+
+.highlight-green {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.highlight-blue {
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.highlight-red {
+    color: #ef4444;
+    font-weight: 600;
 }
 
 .metrics-grid {
