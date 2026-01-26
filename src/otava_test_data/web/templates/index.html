@@ -53,35 +53,16 @@
     </div>
 
     <main>
-        <!-- Data Generation Controls -->
-        <section class="controls top-controls">
-            <div class="control-group generator-group">
-                <label for="generator-select">Generator:</label>
-                <select id="generator-select">
-                    <optgroup label="Clean Patterns (No Noise)">
-                        {% for name, info in generators.items() if info.category == 'clean' %}
-                        <option value="{{ name }}" data-has-cp="{{ info.has_change_points|lower }}">
-                            {{ info.name }}
-                        </option>
-                        {% endfor %}
-                    </optgroup>
-                    <optgroup label="Basic Building Blocks">
-                        {% for name, info in generators.items() if info.category == 'basic' %}
-                        <option value="{{ name }}" data-has-cp="{{ info.has_change_points|lower }}">
-                            {{ info.name }}
-                        </option>
-                        {% endfor %}
-                    </optgroup>
-                    <optgroup label="Advanced Patterns">
-                        {% for name, info in generators.items() if info.category == 'advanced' %}
-                        <option value="{{ name }}" data-has-cp="{{ info.has_change_points|lower }}">
-                            {{ info.name }}
-                        </option>
-                        {% endfor %}
-                    </optgroup>
-                </select>
+        <!-- Generator Selection Grid -->
+        <section class="generator-grid-section">
+            <h3 class="section-title">Select Pattern</h3>
+            <div id="generator-grid" class="generator-grid">
+                <!-- Generator tiles will be dynamically inserted here -->
             </div>
+        </section>
 
+        <!-- Dynamic Parameters -->
+        <section class="controls top-controls" id="params-section">
             <div id="dynamic-params" class="dynamic-params">
                 <!-- Dynamic parameters will be inserted here -->
             </div>

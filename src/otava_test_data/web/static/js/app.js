@@ -7,9 +7,11 @@
 let stackedCharts = [];  // Array of chart instances for stacked view
 let miniCharts = [];
 let generators = {};
+let selectedGenerator = null;
+let generatorTileCharts = {};  // Mini charts for generator tiles
 
 // DOM Elements - Data Generation
-const generatorSelect = document.getElementById('generator-select');
+const generatorGrid = document.getElementById('generator-grid');
 const lengthSlider = document.getElementById('length-slider');
 const lengthInput = document.getElementById('length-input');
 const lengthMin = document.getElementById('length-min');
@@ -93,6 +95,7 @@ const settingsCloseBtn = document.getElementById('settings-close-btn');
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     await loadGenerators();
+    await populateGeneratorGrid();
     setupEventListeners();
     updateGeneratorInfo();
     await generateData();
@@ -103,9 +106,212 @@ async function loadGenerators() {
     try {
         const response = await fetch('/api/generators');
         generators = await response.json();
+        // Set default selected generator
+        selectedGenerator = Object.keys(generators)[0];
     } catch (error) {
         console.error('Failed to load generators:', error);
     }
+}
+
+// Populate generator grid with tiles
+async function populateGeneratorGrid() {
+    generatorGrid.innerHTML = '';
+
+    // Fetch preview data for all generators
+    const previewPromises = Object.keys(generators).map(async (name) => {
+        try {
+            const response = await fetch(`/api/generate/${name}?length=100&seed=42`);
+            return { name, data: await response.json() };
+        } catch (error) {
+            console.error(`Failed to load preview for ${name}:`, error);
+            return { name, data: null };
+        }
+    });
+
+    const previews = await Promise.all(previewPromises);
+    const previewData = {};
+    previews.forEach(p => { previewData[p.name] = p.data; });
+
+    // Custom ordering with four rows:
+    // Row 1: Clean single patterns
+    // Row 2: Clean multiple patterns (with placeholder for Constant)
+    // Row 3: Normal noise single patterns
+    // Row 4: Uniform noise single patterns
+    const generatorNames = Object.keys(generators);
+    const orderedNames = [];
+
+    // Row 1 - single clean patterns
+    const row1Order = [
+        'constant',
+        'outlier_clean',
+        'step_function_clean',
+        'regression_fix_clean',
+        'variance_change_clean',
+        'phase_change_clean',
+        'banding_clean'
+    ];
+    const row1Names = row1Order.filter(name => generatorNames.includes(name));
+    orderedNames.push(...row1Names);
+
+    // Row 2 - multiple clean patterns (with placeholder)
+    const row2Order = [
+        '__placeholder__',
+        'multiple_outliers_clean',
+        'multiple_changes_clean',
+        'multiple_regression_fix_clean',
+        'multiple_variance_changes_clean',
+        'multiple_phase_changes_clean',
+        'multiple_banding_clean'
+    ];
+    const row2Names = row2Order.filter(name =>
+        name === '__placeholder__' || generatorNames.includes(name)
+    );
+    orderedNames.push(...row2Names);
+
+    // Row 3 - normal noise single patterns
+    const row3Order = [
+        'noise_normal',
+        'outlier',
+        'step_function',
+        'regression_fix',
+        'variance_change',
+        'phase_change',
+        'banding'
+    ];
+    const row3Names = row3Order.filter(name => generatorNames.includes(name));
+    orderedNames.push(...row3Names);
+
+    // Row 4 - uniform noise single patterns
+    const row4Order = [
+        'noise_uniform',
+        'outlier_uniform',
+        'step_function_uniform',
+        'regression_fix_uniform',
+        'variance_change_uniform',
+        'phase_change_uniform',
+        'banding_uniform'
+    ];
+    const row4Names = row4Order.filter(name => generatorNames.includes(name));
+    orderedNames.push(...row4Names);
+
+    // Track line break positions
+    const row1EndIndex = row1Names.length;
+    const row2EndIndex = row1Names.length + row2Names.length;
+    const row3EndIndex = row1Names.length + row2Names.length + row3Names.length;
+    const row4EndIndex = row1Names.length + row2Names.length + row3Names.length + row4Names.length;
+
+    // Create tiles for each generator in order
+    let tileIndex = 0;
+    for (const name of orderedNames) {
+        tileIndex++;
+
+        // Handle placeholder tile (empty space for alignment)
+        if (name === '__placeholder__') {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'generator-tile placeholder';
+            generatorGrid.appendChild(placeholder);
+            continue;
+        }
+
+        const info = generators[name];
+        const tile = document.createElement('div');
+        tile.className = 'generator-tile' + (name === selectedGenerator ? ' selected' : '');
+        tile.dataset.generator = name;
+
+        // Preview container
+        const preview = document.createElement('div');
+        preview.className = 'generator-tile-preview';
+        const canvas = document.createElement('canvas');
+        canvas.id = `preview-${name}`;
+        preview.appendChild(canvas);
+
+        // Name label
+        const label = document.createElement('div');
+        label.className = 'generator-tile-name';
+        label.textContent = info.name;
+
+        tile.appendChild(preview);
+        tile.appendChild(label);
+        generatorGrid.appendChild(tile);
+
+        // Add line breaks after each row
+        if (tileIndex === row1EndIndex || tileIndex === row2EndIndex ||
+            tileIndex === row3EndIndex || tileIndex === row4EndIndex) {
+            const lineBreak = document.createElement('div');
+            lineBreak.className = 'generator-grid-break';
+            generatorGrid.appendChild(lineBreak);
+        }
+
+        // Click handler
+        tile.addEventListener('click', () => selectGenerator(name));
+
+        // Create mini chart
+        if (previewData[name] && previewData[name].data) {
+            createTileChart(canvas, previewData[name].data, name === selectedGenerator);
+        }
+    }
+}
+
+// Create a mini chart for a generator tile
+function createTileChart(canvas, data, isSelected) {
+    const ctx = canvas.getContext('2d');
+    const name = canvas.id.replace('preview-', '');
+
+    // Destroy existing chart if any
+    if (generatorTileCharts[name]) {
+        generatorTileCharts[name].destroy();
+    }
+
+    generatorTileCharts[name] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.map((_, i) => i),
+            datasets: [{
+                data: data,
+                borderColor: isSelected ? '#60a5fa' : '#94a3b8',
+                borderWidth: 1,
+                fill: false,
+                tension: 0,
+                pointRadius: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { display: false },
+                y: { display: false }
+            },
+            interaction: { enabled: false },
+            animation: false,
+        }
+    });
+}
+
+// Select a generator from the grid
+function selectGenerator(name) {
+    // Update selection state
+    const previousSelected = selectedGenerator;
+    selectedGenerator = name;
+
+    // Update tile visual state
+    document.querySelectorAll('.generator-tile').forEach(tile => {
+        const isSelected = tile.dataset.generator === name;
+        tile.classList.toggle('selected', isSelected);
+
+        // Update chart color
+        const tileName = tile.dataset.generator;
+        if (generatorTileCharts[tileName]) {
+            generatorTileCharts[tileName].data.datasets[0].borderColor = isSelected ? '#60a5fa' : '#94a3b8';
+            generatorTileCharts[tileName].update('none');
+        }
+    });
+
+    // Trigger UI updates
+    updateGeneratorInfo();
+    updateDynamicParams();
+    generateData();
 }
 
 // Helper function to setup a slider with configurable bounds
@@ -175,11 +381,7 @@ function setupSliderWithBounds(slider, valueInput, minBoundInput, maxBoundInput,
 
 // Setup event listeners
 function setupEventListeners() {
-    generatorSelect.addEventListener('change', () => {
-        updateGeneratorInfo();
-        updateDynamicParams();
-        generateData();
-    });
+    // Generator selection is now handled by tile click in selectGenerator()
 
     // Settings dialog
     settingsBtn.addEventListener('click', () => {
@@ -240,7 +442,7 @@ function setupEventListeners() {
 
 // Update generator info display
 function updateGeneratorInfo() {
-    const name = generatorSelect.value;
+    const name = selectedGenerator;
     const info = generators[name];
 
     if (info) {
@@ -257,7 +459,7 @@ function updateGeneratorInfo() {
 
 // Update dynamic parameter inputs
 function updateDynamicParams() {
-    const name = generatorSelect.value;
+    const name = selectedGenerator;
     const info = generators[name];
 
     dynamicParams.innerHTML = '';
@@ -467,7 +669,7 @@ function detectChangePointsBoundary(data, upperBound, lowerBound) {
 
 // Generate data and update chart
 async function generateData() {
-    const name = generatorSelect.value;
+    const name = selectedGenerator;
     const length = lengthInput.value;
     const seed = seedInput.value;
     const runOtava = runOtavaCheckbox.checked;
@@ -1257,10 +1459,7 @@ async function showAllPatterns() {
             // Click to view in main chart
             div.style.cursor = 'pointer';
             div.addEventListener('click', () => {
-                generatorSelect.value = name;
-                updateGeneratorInfo();
-                updateDynamicParams();
-                generateData();
+                selectGenerator(name);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         }

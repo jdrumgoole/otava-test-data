@@ -185,6 +185,94 @@ main {
     padding: 0.75rem 1rem;
 }
 
+/* Generator Grid Section */
+.generator-grid-section {
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.generator-grid-section .section-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.generator-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.5rem;
+}
+
+.generator-tile {
+    background: var(--background);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.generator-tile:hover {
+    border-color: var(--border-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.generator-tile.selected {
+    background: linear-gradient(135deg, #1e3a5f, #1e293b);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.generator-tile.selected .generator-tile-name {
+    color: white;
+}
+
+.generator-tile-preview {
+    width: 100%;
+    height: 50px;
+    margin-bottom: 0.35rem;
+}
+
+.generator-tile-preview canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.generator-tile-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    line-height: 1.2;
+}
+
+.generator-grid-break {
+    flex-basis: 100%;
+    height: 0;
+    grid-column: 1 / -1;
+}
+
+/* Placeholder tile for alignment */
+.generator-tile.placeholder {
+    background: transparent;
+    border: 2px dashed var(--border-color);
+    cursor: default;
+    opacity: 0.3;
+}
+
+.generator-tile.placeholder:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border-color);
+}
+
 /* Controls Section */
 .controls {
     background: var(--surface);
@@ -250,26 +338,12 @@ main {
     background: var(--primary-hover);
 }
 
-/* Top Controls - Generator, Length, Seed */
+/* Top Controls - Parameters section */
 .top-controls {
     display: flex;
-    flex-wrap: nowrap;
-    gap: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
     align-items: end;
-}
-
-.top-controls .generator-group {
-    flex: 0 0 auto;
-    min-width: 180px;
-}
-
-.top-controls .length-group {
-    flex: 0 1 400px;
-    max-width: 400px;
-}
-
-.top-controls .seed-group {
-    flex: 0 0 auto;
 }
 
 .slider-row {
@@ -353,12 +427,6 @@ main {
     min-width: 120px;
 }
 
-/* Length slider group */
-.top-controls .length-group {
-    flex: 0 1 450px;
-    max-width: 450px;
-}
-
 .seed-input {
     width: 5em !important;
     text-align: center;
@@ -375,6 +443,10 @@ main {
 }
 
 .dynamic-params:empty {
+    display: none;
+}
+
+#params-section:has(.dynamic-params:empty) {
     display: none;
 }
 

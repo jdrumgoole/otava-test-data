@@ -449,3 +449,403 @@ def multiple_variance_changes(
             "seed": seed,
         },
     )
+
+
+def multiple_regression_fix(
+    length: int,
+    value_normal: float = 100.0,
+    value_regression: float = 130.0,
+    n_regressions: int = 3,
+    regression_duration: int | None = None,
+    sigma: float = 0.0,
+    seed: int | None = None,
+) -> TimeSeries:
+    """
+    Generate a time series with multiple regression+fix cycles.
+
+    Multiple temporary regressions that each get fixed, returning to normal.
+
+    Args:
+        length: Number of data points.
+        value_normal: The normal/baseline value.
+        value_regression: The regression value.
+        n_regressions: Number of regression cycles.
+        regression_duration: Duration of each regression. If None, auto-calculated.
+        sigma: If > 0, add normal noise with this standard deviation.
+        seed: Random seed for reproducibility.
+
+    Returns:
+        TimeSeries with multiple regression+fix change points.
+    """
+    rng = np.random.default_rng(seed)
+
+    # Calculate segment sizes
+    n_segments = n_regressions * 2 + 1  # normal, reg, normal, reg, normal, ...
+    segment_length = length // n_segments
+    if regression_duration is None:
+        regression_duration = segment_length
+
+    data = np.full(length, value_normal, dtype=np.float64)
+    change_points = []
+
+    for i in range(n_regressions):
+        # Start of regression
+        reg_start = segment_length * (2 * i + 1)
+        reg_end = min(reg_start + regression_duration, length)
+
+        if reg_start < length:
+            data[reg_start:reg_end] = value_regression
+            change_points.append(
+                ChangePoint(
+                    index=reg_start,
+                    change_type="regression",
+                    before_value=value_normal,
+                    after_value=value_regression,
+                    description=f"Regression {i+1} start",
+                )
+            )
+            if reg_end < length:
+                change_points.append(
+                    ChangePoint(
+                        index=reg_end,
+                        change_type="fix",
+                        before_value=value_regression,
+                        after_value=value_normal,
+                        description=f"Regression {i+1} fix",
+                    )
+                )
+
+    if sigma > 0:
+        data += rng.normal(0, sigma, length)
+
+    return TimeSeries(
+        data=data,
+        change_points=change_points,
+        generator_name="multiple_regression_fix",
+        parameters={
+            "length": length,
+            "value_normal": value_normal,
+            "value_regression": value_regression,
+            "n_regressions": n_regressions,
+            "regression_duration": regression_duration,
+            "sigma": sigma,
+            "seed": seed,
+        },
+    )
+
+
+def multiple_banding(
+    length: int,
+    value_pairs: list[tuple[float, float]] | None = None,
+    sigma: float = 0.0,
+    seed: int | None = None,
+) -> TimeSeries:
+    """
+    Generate a time series with multiple banding segments.
+
+    Each segment oscillates between a different pair of values.
+
+    Args:
+        length: Number of data points.
+        value_pairs: List of (value1, value2) tuples for each segment.
+                    If None, defaults to 3 segments with different pairs.
+        sigma: If > 0, add normal noise with this standard deviation.
+        seed: Random seed for reproducibility.
+
+    Returns:
+        TimeSeries with multiple banding segments.
+    """
+    rng = np.random.default_rng(seed)
+
+    if value_pairs is None:
+        value_pairs = [(95.0, 105.0), (100.0, 115.0), (90.0, 100.0)]
+
+    n_segments = len(value_pairs)
+    segment_length = length // n_segments
+
+    data = np.empty(length, dtype=np.float64)
+    change_points = []
+
+    for i, (v1, v2) in enumerate(value_pairs):
+        start = i * segment_length
+        end = (i + 1) * segment_length if i < n_segments - 1 else length
+        segment_len = end - start
+
+        # Random banding within this segment
+        choices = rng.choice([v1, v2], size=segment_len)
+        data[start:end] = choices
+
+        if i > 0:
+            change_points.append(
+                ChangePoint(
+                    index=start,
+                    change_type="banding_change",
+                    before_value=value_pairs[i-1][0],
+                    after_value=v1,
+                    description=f"Banding change to ({v1}, {v2})",
+                )
+            )
+
+    if sigma > 0:
+        data += rng.normal(0, sigma, length)
+
+    return TimeSeries(
+        data=data,
+        change_points=change_points,
+        generator_name="multiple_banding",
+        parameters={
+            "length": length,
+            "value_pairs": value_pairs,
+            "sigma": sigma,
+            "seed": seed,
+        },
+    )
+
+
+def multiple_phase_changes(
+    length: int,
+    amplitude: float = 10.0,
+    baseline: float = 100.0,
+    period: int = 20,
+    n_changes: int = 3,
+    sigma: float = 0.0,
+    seed: int | None = None,
+) -> TimeSeries:
+    """
+    Generate a time series with multiple phase changes.
+
+    A periodic signal that undergoes multiple phase shifts.
+
+    Args:
+        length: Number of data points.
+        amplitude: Amplitude of the periodic signal.
+        baseline: Baseline/center value.
+        period: Period of the oscillation.
+        n_changes: Number of phase changes.
+        sigma: If > 0, add normal noise with this standard deviation.
+        seed: Random seed for reproducibility.
+
+    Returns:
+        TimeSeries with multiple phase change points.
+    """
+    rng = np.random.default_rng(seed)
+
+    segment_length = length // (n_changes + 1)
+    data = np.empty(length, dtype=np.float64)
+    change_points = []
+
+    phase_shifts = [0] + [np.pi / 2 * (i + 1) for i in range(n_changes)]
+
+    for i, phase in enumerate(phase_shifts):
+        start = i * segment_length
+        end = (i + 1) * segment_length if i < n_changes else length
+
+        x = np.arange(start, end)
+        data[start:end] = baseline + amplitude * np.cos(2 * np.pi * x / period + phase)
+
+        if i > 0:
+            change_points.append(
+                ChangePoint(
+                    index=start,
+                    change_type="phase",
+                    before_value=phase_shifts[i-1],
+                    after_value=phase,
+                    description=f"Phase shift to {phase:.2f} rad",
+                )
+            )
+
+    if sigma > 0:
+        data += rng.normal(0, sigma, length)
+
+    return TimeSeries(
+        data=data,
+        change_points=change_points,
+        generator_name="multiple_phase_changes",
+        parameters={
+            "length": length,
+            "amplitude": amplitude,
+            "baseline": baseline,
+            "period": period,
+            "n_changes": n_changes,
+            "sigma": sigma,
+            "seed": seed,
+        },
+    )
+
+
+# =============================================================================
+# Uniform Noise Variants
+# =============================================================================
+
+def outlier_uniform(
+    length: int,
+    baseline: float = 100.0,
+    outlier_value: float = 150.0,
+    outlier_index: int | None = None,
+    noise_range: float = 10.0,
+    seed: int | None = None,
+) -> TimeSeries:
+    """Single outlier with uniform noise."""
+    rng = np.random.default_rng(seed)
+
+    if outlier_index is None:
+        outlier_index = length // 2
+
+    data = np.full(length, baseline, dtype=np.float64)
+    data[outlier_index] = outlier_value
+
+    # Add uniform noise
+    data += rng.uniform(-noise_range/2, noise_range/2, length)
+
+    return TimeSeries(
+        data=data,
+        change_points=[
+            ChangePoint(
+                index=outlier_index,
+                change_type="outlier",
+                before_value=baseline,
+                after_value=outlier_value,
+                description=f"Single outlier at index {outlier_index}",
+            )
+        ],
+        generator_name="outlier_uniform",
+        parameters={"length": length, "baseline": baseline, "outlier_value": outlier_value,
+                    "outlier_index": outlier_index, "noise_range": noise_range, "seed": seed},
+    )
+
+
+def step_function_uniform(
+    length: int,
+    value_before: float = 100.0,
+    value_after: float = 120.0,
+    change_index: int | None = None,
+    noise_range: float = 10.0,
+    seed: int | None = None,
+) -> TimeSeries:
+    """Step function with uniform noise."""
+    rng = np.random.default_rng(seed)
+
+    if change_index is None:
+        change_index = length // 2
+
+    data = np.empty(length, dtype=np.float64)
+    data[:change_index] = value_before
+    data[change_index:] = value_after
+
+    data += rng.uniform(-noise_range/2, noise_range/2, length)
+
+    return TimeSeries(
+        data=data,
+        change_points=[
+            ChangePoint(
+                index=change_index,
+                change_type="step",
+                before_value=value_before,
+                after_value=value_after,
+                description=f"Step from {value_before} to {value_after}",
+            )
+        ],
+        generator_name="step_function_uniform",
+        parameters={"length": length, "value_before": value_before, "value_after": value_after,
+                    "change_index": change_index, "noise_range": noise_range, "seed": seed},
+    )
+
+
+def regression_fix_uniform(
+    length: int,
+    value_normal: float = 100.0,
+    value_regression: float = 130.0,
+    regression_start: int | None = None,
+    regression_duration: int = 20,
+    noise_range: float = 10.0,
+    seed: int | None = None,
+) -> TimeSeries:
+    """Regression + fix pattern with uniform noise."""
+    rng = np.random.default_rng(seed)
+
+    if regression_start is None:
+        regression_start = length // 3
+
+    regression_end = min(regression_start + regression_duration, length - 1)
+
+    data = np.full(length, value_normal, dtype=np.float64)
+    data[regression_start:regression_end] = value_regression
+
+    data += rng.uniform(-noise_range/2, noise_range/2, length)
+
+    change_points = [
+        ChangePoint(index=regression_start, change_type="regression",
+                    before_value=value_normal, after_value=value_regression,
+                    description="Performance regression"),
+    ]
+    if regression_end < length:
+        change_points.append(
+            ChangePoint(index=regression_end, change_type="fix",
+                        before_value=value_regression, after_value=value_normal,
+                        description="Regression fixed")
+        )
+
+    return TimeSeries(
+        data=data, change_points=change_points, generator_name="regression_fix_uniform",
+        parameters={"length": length, "value_normal": value_normal, "value_regression": value_regression,
+                    "regression_start": regression_start, "regression_duration": regression_duration,
+                    "noise_range": noise_range, "seed": seed},
+    )
+
+
+def banding_uniform(
+    length: int,
+    value1: float = 100.0,
+    value2: float = 105.0,
+    noise_range: float = 4.0,
+    seed: int | None = None,
+) -> TimeSeries:
+    """Banding pattern with uniform noise."""
+    rng = np.random.default_rng(seed)
+
+    choices = rng.choice([value1, value2], size=length)
+    data = choices.astype(np.float64)
+    data += rng.uniform(-noise_range/2, noise_range/2, length)
+
+    return TimeSeries(
+        data=data, change_points=[], generator_name="banding_uniform",
+        parameters={"length": length, "value1": value1, "value2": value2,
+                    "noise_range": noise_range, "seed": seed},
+    )
+
+
+def phase_change_uniform(
+    length: int,
+    amplitude: float = 10.0,
+    baseline: float = 100.0,
+    period: int = 20,
+    change_index: int | None = None,
+    noise_range: float = 4.0,
+    seed: int | None = None,
+) -> TimeSeries:
+    """Phase change with uniform noise."""
+    rng = np.random.default_rng(seed)
+
+    if change_index is None:
+        change_index = length // 2
+
+    data = np.empty(length, dtype=np.float64)
+    x = np.arange(length) * 2 * np.pi / period
+
+    data[:change_index] = baseline + amplitude * np.cos(x[:change_index])
+    data[change_index:] = baseline + amplitude * np.sin(x[change_index:])
+
+    data += rng.uniform(-noise_range/2, noise_range/2, length)
+
+    return TimeSeries(
+        data=data,
+        change_points=[
+            ChangePoint(index=change_index, change_type="phase",
+                        before_value=0.0, after_value=np.pi/2,
+                        description="Phase shift: cos -> sin")
+        ],
+        generator_name="phase_change_uniform",
+        parameters={"length": length, "amplitude": amplitude, "baseline": baseline,
+                    "period": period, "change_index": change_index,
+                    "noise_range": noise_range, "seed": seed},
+    )
