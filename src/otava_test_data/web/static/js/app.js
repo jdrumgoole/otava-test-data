@@ -40,6 +40,11 @@ const runBoundaryCheckbox = document.getElementById('run-boundary-checkbox');
 const boundaryUpperInput = document.getElementById('boundary-upper-input');
 const boundaryLowerInput = document.getElementById('boundary-lower-input');
 
+// DOM Elements - Threshold Alert Controls
+const runThresholdCheckbox = document.getElementById('run-threshold-checkbox');
+const thresholdPercentInput = document.getElementById('threshold-percent-input');
+const thresholdOffsetInput = document.getElementById('threshold-offset-input');
+
 // Default match tolerance for comparing detected vs ground truth change points
 const DEFAULT_TOLERANCE = 0;
 
@@ -226,6 +231,11 @@ function setupEventListeners() {
     runBoundaryCheckbox.addEventListener('change', generateData);
     boundaryUpperInput.addEventListener('change', generateData);
     boundaryLowerInput.addEventListener('change', generateData);
+
+    // Threshold Alert controls
+    runThresholdCheckbox.addEventListener('change', generateData);
+    thresholdPercentInput.addEventListener('change', generateData);
+    thresholdOffsetInput.addEventListener('change', generateData);
 }
 
 // Update generator info display
@@ -360,6 +370,48 @@ function detectChangePointsMA(data, windowSize, threshold) {
                 maAfter: candidate.meanAfter.toFixed(2),
                 diff: candidate.diff.toFixed(2),
                 threshold: candidate.threshold.toFixed(2)
+            });
+        }
+    }
+
+    return { indices, details };
+}
+
+/**
+ * Threshold Based Alert Detection
+ * Detects points where the value changed by more than a threshold percentage
+ * compared to a previous point (configurable offset)
+ * @param {number[]} data - The time series data
+ * @param {number} threshold - Percentage threshold (e.g., 5 for 5%)
+ * @param {number} offset - How far back to look for comparison (1 = previous point, 2 = two points back, etc.)
+ */
+function detectChangePointsThreshold(data, threshold, offset = 1) {
+    const indices = [];
+    const details = [];
+
+    // Start from the offset index (need at least 'offset' prior points)
+    for (let i = offset; i < data.length; i++) {
+        const currentValue = data[i];
+        const referenceValue = data[i - offset];
+
+        // Avoid division by zero
+        if (referenceValue === 0) {
+            continue;
+        }
+
+        // Calculate percentage change
+        const percentChange = ((currentValue - referenceValue) / Math.abs(referenceValue)) * 100;
+        const absPercentChange = Math.abs(percentChange);
+
+        if (absPercentChange > threshold) {
+            indices.push(i);
+            details.push({
+                index: i,
+                currentValue: currentValue.toFixed(2),
+                referenceValue: referenceValue.toFixed(2),
+                referenceIndex: i - offset,
+                percentChange: percentChange.toFixed(2),
+                direction: percentChange > 0 ? 'increase' : 'decrease'
             });
         }
     }
@@ -527,6 +579,24 @@ function updateChart(data) {
         }
     });
 
+    // Run Threshold Alert detection if enabled
+    const runThreshold = runThresholdCheckbox.checked;
+    const thresholdPercent = parseFloat(thresholdPercentInput.value);
+    const thresholdOffset = parseInt(thresholdOffsetInput.value);
+    const thresholdResult = runThreshold ? detectChangePointsThreshold(values, thresholdPercent, thresholdOffset) : { indices: [], details: [] };
+    const thresholdDetectedIndices = thresholdResult.indices;
+
+    // Determine matched pairs for Threshold Alert coloring
+    const thresholdMatchedIndices = new Set();
+    thresholdDetectedIndices.forEach(tIdx => {
+        for (const gtIdx of groundTruthIndices) {
+            if (Math.abs(tIdx - gtIdx) <= DEFAULT_TOLERANCE) {
+                thresholdMatchedIndices.add(tIdx);
+                break;
+            }
+        }
+    });
+
     // Create ground truth annotations (shared by all charts)
     const createAnnotations = () => {
         const annotations = {};
@@ -609,6 +679,7 @@ function updateChart(data) {
     if (runOtavaCheckbox.checked) enabledMethods.push('otava');
     if (runMa) enabledMethods.push('ma');
     if (runBoundary) enabledMethods.push('boundary');
+    if (runThreshold) enabledMethods.push('threshold');
 
     // Create Otava chart if enabled
     if (runOtavaCheckbox.checked) {
@@ -784,6 +855,53 @@ function updateChart(data) {
                 }]
             },
             options: getChartOptions(annotations, isLast)
+        });
+        stackedCharts.push(chart);
+    }
+
+    // Create Threshold Alert chart if enabled
+    if (runThreshold) {
+        const thresholdTp = thresholdMatchedIndices.size;
+        const thresholdFp = thresholdDetectedIndices.length - thresholdTp;
+        const canvas = createChartContainer('threshold', `Threshold Alert (>${thresholdPercent}%, offset=${thresholdOffset})`, '#ec4899', thresholdTp, thresholdFp);
+        const ctx = canvas.getContext('2d');
+
+        const thresholdPointColors = values.map((_, i) => {
+            if (thresholdDetectedIndices.includes(i)) {
+                return thresholdMatchedIndices.has(i) ? '#ec4899' : '#f97316';
+            }
+            return 'transparent';
+        });
+        const thresholdPointBorders = values.map((_, i) => {
+            if (thresholdDetectedIndices.includes(i)) {
+                return thresholdMatchedIndices.has(i) ? '#db2777' : '#ea580c';
+            }
+            return 'transparent';
+        });
+        const thresholdPointRadii = values.map((_, i) => thresholdDetectedIndices.includes(i) ? 6 : 0);
+
+        const isLast = enabledMethods[enabledMethods.length - 1] === 'threshold';
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Threshold Alert Detection',
+                    data: values,
+                    borderColor: '#94a3b8',
+                    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+                    borderWidth: 1.5,
+                    fill: true,
+                    tension: 0,
+                    pointBackgroundColor: thresholdPointColors,
+                    pointBorderColor: thresholdPointBorders,
+                    pointBorderWidth: 1.5,
+                    pointRadius: thresholdPointRadii,
+                    pointHoverRadius: 8,
+                    pointStyle: 'star',
+                }]
+            },
+            options: getChartOptions(createAnnotations(), isLast)
         });
         stackedCharts.push(chart);
     }

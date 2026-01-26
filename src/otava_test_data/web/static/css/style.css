@@ -847,6 +847,24 @@ footer a:hover {
     border-color: transparent transparent #ec4899 transparent;
 }
 
+.legend-marker.threshold-detected {
+    background: #ec4899;
+    border: 2px solid #db2777;
+    border-radius: 0;
+    width: 10px;
+    height: 10px;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.legend-marker.threshold-false-positive {
+    background: #f97316;
+    border: 2px solid #ea580c;
+    border-radius: 0;
+    width: 10px;
+    height: 10px;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
 /* Moving Average Controls Section */
 .ma-controls {
     border-left: 3px solid #8b5cf6;
@@ -870,6 +888,19 @@ footer a:hover {
     grid-column: 1 / -1;
     margin: 0 0 0.25rem 0;
     color: #06b6d4;
+    font-size: 0.9rem;
+}
+
+/* Threshold Alert Controls Section */
+.threshold-controls {
+    border-left: 3px solid #ec4899;
+}
+
+.threshold-controls .section-title,
+.threshold-controls .panel-title {
+    grid-column: 1 / -1;
+    margin: 0 0 0.25rem 0;
+    color: #ec4899;
     font-size: 0.9rem;
 }
 
@@ -1080,6 +1111,10 @@ footer a:hover {
 
 .stacked-chart-header .method-indicator.boundary {
     background: #06b6d4;
+}
+
+.stacked-chart-header .method-indicator.threshold {
+    background: #ec4899;
 }
 
 .stacked-chart-header .detection-count {
