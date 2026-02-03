@@ -1,12 +1,12 @@
 """
-Otava Test Data - Test data generators for Apache Otava change point detection.
+Otava Test Data - Test data generators and Visualization for Apache Otava change point detection.
 
 This package provides generators for creating synthetic time series data
-with known change points for testing and benchmarking change point detection
+with known change points for testing and visualizing change point detection
 algorithms.
 """
 
-__version__ = "0.1.6"
+__version__ = "0.1.9"
 
 from otava_test_data.generators.basic import (
     constant,

@@ -9,6 +9,8 @@ let miniCharts = [];
 let generators = {};
 let selectedGenerator = null;
 let generatorTileCharts = {};  // Mini charts for generator tiles
+let analysisMethods = {};  // Tutorial content for analysis methods
+let tutorialVisible = false;  // Track tutorial panel visibility
 
 // DOM Elements - Data Generation
 const generatorGrid = document.getElementById('generator-grid');
@@ -92,11 +94,22 @@ const settingsBtn = document.getElementById('settings-btn');
 const settingsDialog = document.getElementById('settings-dialog');
 const settingsCloseBtn = document.getElementById('settings-close-btn');
 
+// DOM Elements - Tutorial
+const toggleTutorialBtn = document.getElementById('toggle-tutorial-btn');
+const generatorTutorialPanel = document.getElementById('generator-tutorial-panel');
+const tutorialExplanation = document.getElementById('tutorial-explanation');
+const tutorialUseCase = document.getElementById('tutorial-use-case');
+const tutorialDetectionNotes = document.getElementById('tutorial-detection-notes');
+const methodHelpBtns = document.querySelectorAll('.method-help-btn');
+const metricsHelpBtn = document.getElementById('metrics-help-btn');
+const metricsTutorialPanel = document.getElementById('metrics-tutorial-panel');
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadGenerators();
+    await Promise.all([loadGenerators(), loadAnalysisMethods()]);
     await populateGeneratorGrid();
     setupEventListeners();
+    setupTutorialHandlers();
     updateGeneratorInfo();
     await generateData();
 });
@@ -110,6 +123,53 @@ async function loadGenerators() {
         selectedGenerator = Object.keys(generators)[0];
     } catch (error) {
         console.error('Failed to load generators:', error);
+    }
+}
+
+// Load analysis method explanations
+async function loadAnalysisMethods() {
+    try {
+        const response = await fetch('/api/methods');
+        analysisMethods = await response.json();
+        populateMethodTutorials();
+    } catch (error) {
+        console.error('Failed to load analysis methods:', error);
+    }
+}
+
+// Populate method tutorial panels with content from API
+function populateMethodTutorials() {
+    // Populate Otava tutorial
+    if (analysisMethods.otava) {
+        const otavaTutorial = document.getElementById('otava-tutorial');
+        if (otavaTutorial) {
+            otavaTutorial.querySelector('.method-explanation').textContent = analysisMethods.otava.explanation;
+            otavaTutorial.querySelector('.method-algorithm pre').textContent = analysisMethods.otava.algorithm;
+            const bestForList = otavaTutorial.querySelector('.method-best-for ul');
+            bestForList.innerHTML = analysisMethods.otava.best_for.map(item => `<li>${item}</li>`).join('');
+        }
+    }
+
+    // Populate Moving Average tutorial
+    if (analysisMethods.moving_average) {
+        const maTutorial = document.getElementById('ma-tutorial');
+        if (maTutorial) {
+            maTutorial.querySelector('.method-explanation').textContent = analysisMethods.moving_average.explanation;
+            maTutorial.querySelector('.method-algorithm pre').textContent = analysisMethods.moving_average.algorithm;
+            const bestForList = maTutorial.querySelector('.method-best-for ul');
+            bestForList.innerHTML = analysisMethods.moving_average.best_for.map(item => `<li>${item}</li>`).join('');
+        }
+    }
+
+    // Populate Boundary tutorial
+    if (analysisMethods.boundary) {
+        const boundaryTutorial = document.getElementById('boundary-tutorial');
+        if (boundaryTutorial) {
+            boundaryTutorial.querySelector('.method-explanation').textContent = analysisMethods.boundary.explanation;
+            boundaryTutorial.querySelector('.method-algorithm pre').textContent = analysisMethods.boundary.algorithm;
+            const bestForList = boundaryTutorial.querySelector('.method-best-for ul');
+            bestForList.innerHTML = analysisMethods.boundary.best_for.map(item => `<li>${item}</li>`).join('');
+        }
     }
 }
 
@@ -289,6 +349,88 @@ function createTileChart(canvas, data, isSelected) {
     });
 }
 
+// Setup tutorial event handlers
+function setupTutorialHandlers() {
+    // Generator tutorial toggle
+    if (toggleTutorialBtn) {
+        toggleTutorialBtn.addEventListener('click', () => {
+            tutorialVisible = !tutorialVisible;
+            if (tutorialVisible) {
+                generatorTutorialPanel.classList.remove('hidden');
+                toggleTutorialBtn.classList.add('active');
+            } else {
+                generatorTutorialPanel.classList.add('hidden');
+                toggleTutorialBtn.classList.remove('active');
+            }
+        });
+    }
+
+    // Metrics tutorial toggle
+    if (metricsHelpBtn && metricsTutorialPanel) {
+        metricsHelpBtn.addEventListener('click', () => {
+            const isVisible = !metricsTutorialPanel.classList.contains('hidden');
+            if (isVisible) {
+                metricsTutorialPanel.classList.add('hidden');
+                metricsHelpBtn.classList.remove('active');
+            } else {
+                metricsTutorialPanel.classList.remove('hidden');
+                metricsHelpBtn.classList.add('active');
+            }
+        });
+    }
+
+    // Method help button handlers
+    methodHelpBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const methodId = btn.dataset.method;
+            const tutorialId = methodId === 'moving_average' ? 'ma-tutorial' : `${methodId}-tutorial`;
+            const tutorialPanel = document.getElementById(tutorialId);
+
+            if (tutorialPanel) {
+                const isVisible = !tutorialPanel.classList.contains('hidden');
+                // Hide all method tutorials first
+                document.querySelectorAll('.method-tutorial').forEach(panel => {
+                    panel.classList.add('hidden');
+                });
+                document.querySelectorAll('.method-help-btn').forEach(b => {
+                    b.classList.remove('active');
+                });
+
+                // Toggle the clicked one
+                if (!isVisible) {
+                    tutorialPanel.classList.remove('hidden');
+                    btn.classList.add('active');
+                }
+            }
+        });
+    });
+
+    // Initialize tooltips for parameter labels
+    initializeTooltips();
+}
+
+// Initialize custom tooltips for parameter labels and help buttons
+function initializeTooltips() {
+    document.querySelectorAll('.param-label[data-tooltip]').forEach(label => {
+        label.addEventListener('mouseenter', showTooltip);
+        label.addEventListener('mouseleave', hideTooltip);
+    });
+
+    // Parameter help buttons - show tooltip on click
+    document.querySelectorAll('.param-help-btn[data-tooltip]').forEach(btn => {
+        btn.addEventListener('click', toggleParamTooltip);
+    });
+
+    // Close tooltips when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('param-help-btn')) {
+            document.querySelectorAll('.param-tooltip-popup').forEach(t => t.remove());
+            document.querySelectorAll('.param-help-btn').forEach(b => b.classList.remove('active'));
+        }
+    });
+}
+
 // Select a generator from the grid
 function selectGenerator(name) {
     // Update selection state
@@ -312,6 +454,74 @@ function selectGenerator(name) {
     updateGeneratorInfo();
     updateDynamicParams();
     generateData();
+}
+
+// Toggle tooltip popup for param help buttons
+function toggleParamTooltip(e) {
+    e.stopPropagation();
+    const btn = e.target;
+    const tooltipText = btn.dataset.tooltip;
+    if (!tooltipText) return;
+
+    // Check if already showing
+    if (btn._tooltipPopup) {
+        btn._tooltipPopup.remove();
+        btn._tooltipPopup = null;
+        btn.classList.remove('active');
+        return;
+    }
+
+    // Close other tooltips
+    document.querySelectorAll('.param-tooltip-popup').forEach(t => t.remove());
+    document.querySelectorAll('.param-help-btn').forEach(b => {
+        b._tooltipPopup = null;
+        b.classList.remove('active');
+    });
+
+    // Create tooltip element
+    const tooltip = document.createElement('div');
+    tooltip.className = 'param-tooltip-popup';
+    tooltip.textContent = tooltipText;
+    document.body.appendChild(tooltip);
+
+    // Position tooltip
+    const rect = btn.getBoundingClientRect();
+    tooltip.style.left = `${rect.left}px`;
+    tooltip.style.top = `${rect.bottom + 5}px`;
+
+    // Store reference
+    btn._tooltipPopup = tooltip;
+    btn.classList.add('active');
+}
+
+// Show tooltip
+function showTooltip(e) {
+    const label = e.target;
+    const tooltipText = label.dataset.tooltip;
+    if (!tooltipText) return;
+
+    // Create tooltip element
+    const tooltip = document.createElement('div');
+    tooltip.className = 'param-tooltip';
+    tooltip.textContent = tooltipText;
+    document.body.appendChild(tooltip);
+
+    // Position tooltip
+    const rect = label.getBoundingClientRect();
+    tooltip.style.left = `${rect.left}px`;
+    tooltip.style.top = `${rect.bottom + 5}px`;
+
+    // Store reference for removal
+    label._tooltip = tooltip;
+}
+
+// Hide tooltip
+function hideTooltip(e) {
+    const label = e.target;
+    if (label._tooltip) {
+        label._tooltip.remove();
+        label._tooltip = null;
+    }
 }
 
 // Helper function to setup a slider with configurable bounds
@@ -454,6 +664,17 @@ function updateGeneratorInfo() {
         } else {
             changePointInfo.classList.add('hidden');
         }
+
+        // Update tutorial panel content
+        if (info.tutorial) {
+            tutorialExplanation.textContent = info.tutorial.explanation || '-';
+            tutorialUseCase.textContent = info.tutorial.use_case || '-';
+            tutorialDetectionNotes.textContent = info.tutorial.detection_notes || '-';
+        } else {
+            tutorialExplanation.textContent = '-';
+            tutorialUseCase.textContent = '-';
+            tutorialDetectionNotes.textContent = '-';
+        }
     }
 }
 
@@ -473,6 +694,10 @@ function updateDynamicParams() {
             label.textContent = formatParamName(paramName);
             label.htmlFor = `param-${paramName}`;
 
+            // Create input container with input and optional help button
+            const inputContainer = document.createElement('div');
+            inputContainer.className = 'input-with-help';
+
             const input = document.createElement('input');
             input.type = 'number';
             input.id = `param-${paramName}`;
@@ -482,9 +707,21 @@ function updateDynamicParams() {
             input.max = paramInfo.max;
             input.step = paramInfo.step || 1;
             input.addEventListener('change', generateData);
+            inputContainer.appendChild(input);
+
+            // Add help button if tooltip exists
+            if (paramInfo.tooltip) {
+                const helpBtn = document.createElement('button');
+                helpBtn.type = 'button';
+                helpBtn.className = 'param-help-btn';
+                helpBtn.dataset.tooltip = paramInfo.tooltip;
+                helpBtn.textContent = '?';
+                helpBtn.addEventListener('click', toggleParamTooltip);
+                inputContainer.appendChild(helpBtn);
+            }
 
             div.appendChild(label);
-            div.appendChild(input);
+            div.appendChild(inputContainer);
             dynamicParams.appendChild(div);
         }
     }

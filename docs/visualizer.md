@@ -27,10 +27,67 @@ The visualizer provides:
 - **Generator Selection**: Choose from 12 different test pattern generators
 - **Settings Dialog**: Access global settings (Length, Seed) via the gear icon in the top-right corner
 - **Parameter Controls**: Adjust generator-specific parameters
+- **Tutorial Mode**: Detailed explanations for generators and analysis methods
 - **Otava Analysis**: Run change point detection and view results
 - **Accuracy Metrics**: Compare detected vs ground truth change points
 
 ![Settings dialog](_static/screenshots/settings-dialog-visible.png)
+
+## Tutorial Mode
+
+The visualizer includes comprehensive tutorial content to help you understand each generator pattern, analysis method, and detection metrics. This is especially useful for learning about change point detection or when presenting to others.
+
+All tutorial content is accessible via **?** help buttons throughout the interface.
+
+### Generator Tutorials
+
+Each generator has detailed explanations accessible via the **?** button next to the generator info:
+
+![Tutorial panel](_static/screenshots/tutorial-panel.png)
+
+The tutorial panel shows:
+
+- **Pattern Explanation**: What the data pattern represents and how it's generated
+- **Real-World Use Case**: Practical scenarios this pattern simulates
+- **Detection Notes**: What good detectors should (or shouldn't) do with this pattern
+
+The content updates automatically when you select a different generator.
+
+### Analysis Method Tutorials
+
+Each analysis panel (Otava, Moving Average, Boundary) has a **?** help button that reveals detailed explanations:
+
+- **Algorithm**: Step-by-step description of how the method works
+- **Best For**: Types of patterns this method excels at detecting
+- **Parameter Tooltips**: Hover over parameter labels to see what each parameter controls
+
+Click the **?** button to expand/collapse the method explanation. This helps you understand which method to use for different scenarios.
+
+### Detection Metrics Tutorial
+
+The Detection Accuracy section has a **?** button that explains how detection performance is measured:
+
+![Metrics tutorial](_static/screenshots/tutorial-metrics.png)
+
+**Key concepts explained:**
+
+- **Ground Truth**: The actual, known change points in the data (shown as green dashed lines on the chart). In this visualizer, we know exactly where changes occur because we programmed them.
+
+- **True Positive (TP)**: A correctly detected change point - the detector found a real change. Shown as colored markers (blue for Otava, purple for MA, cyan for Boundary).
+
+- **False Positive (FP)**: A false alarm - the detector reported a change where none exists. Shown as red/orange/pink markers depending on the method.
+
+- **False Negative (FN)**: A missed change - a real change point the detector failed to find. These are ground truth lines without matching detection markers.
+
+**How metrics are calculated:**
+
+- **Precision** = TP / (TP + FP) - Of all detections made, what fraction were correct?
+- **Recall** = TP / (TP + FN) - Of all real changes, what fraction were found?
+- **F1 Score** = Harmonic mean of Precision and Recall - Overall detection quality
+
+**Understanding detection matching:**
+
+Detected points are matched to ground truth using a tolerance (default: 5 indices). If a detection is within 5 points of a ground truth change, it counts as a True Positive. This allows for slight positional inaccuracy which is normal due to windowing algorithms.
 
 ## Common Parameters
 
